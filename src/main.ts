@@ -62,7 +62,10 @@ function initApp() {
 
   // 查詢漢字並動態載入靜態分片 (Zero-Trust GET)
   const searchAndLoad = async (char: string) => {
-    if (!char) return;
+    if (!char) {
+      inputChar?.focus();
+      return;
+    }
     const unicode = char.charCodeAt(0).toString(16).toUpperCase();
 
     try {
@@ -78,10 +81,19 @@ function initApp() {
     }
   };
 
-  // 1. 綁定搜尋輸入
-  btnSearch?.addEventListener('click', () => searchAndLoad(inputChar.value.trim()));
+  // 1. 綁定搜尋輸入（留空時點擊則自動聚焦輸入框）
+  const handleSearch = () => {
+    const val = inputChar.value.trim();
+    if (!val) {
+      inputChar.focus();
+      return;
+    }
+    searchAndLoad(val);
+  };
+
+  btnSearch?.addEventListener('click', handleSearch);
   inputChar?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') searchAndLoad(inputChar.value.trim());
+    if (e.key === 'Enter') handleSearch();
   });
 
   // 2. 圓形播放暫停控制
@@ -129,6 +141,11 @@ function initApp() {
   const updateUITranslations = () => {
     const descEl = document.getElementById('ui-desc');
     if (descEl) descEl.textContent = i18n.t('app.description');
+
+    // 輸入框 Placeholder 支援三語
+    if (inputChar) {
+      inputChar.placeholder = i18n.getLocale() === 'en' ? 'Type Char' : '輸入單字';
+    }
 
     const searchLabel = document.querySelector('.search-label');
     if (searchLabel) searchLabel.textContent = i18n.t('ui.search.label');
@@ -181,7 +198,10 @@ function initApp() {
   // 初次執行多語系文字注入
   updateUITranslations();
 
-  // 初始化載入「上」字
+  // 畫布載入預設示範字「上」，但將輸入框保持為空，顯露 placeholder
+  if (inputChar) {
+    inputChar.value = '';
+  }
   searchAndLoad('上');
 }
 
