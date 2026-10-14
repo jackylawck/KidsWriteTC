@@ -2,15 +2,14 @@
 <html lang="zh-HK">
   <head>
     <meta charset="UTF-8" />
-    <!-- 鎖定螢幕縮放，防止小朋友雙擊放大 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>KidsWriteTC</title>
+    <title>童寫繁體字 KidsWriteTC</title>
   </head>
   <body>
     <div id="app">
       <header>
         <h1 id="ui-title">童寫繁體字 KidsWriteTC</h1>
-        <p id="ui-desc">專為香港小學生設計的純淨筆順描紅工具</p>
+        <p id="ui-desc">專為香港小學生設計的純淨筆順教學與描紅工具</p>
         
         <div class="lang-selector">
           <button data-lang="zh-HK">繁體 (HK)</button>
@@ -20,20 +19,34 @@
       </header>
       
       <main>
-        <!-- 描紅畫布區域 -->
+        <!-- 漢字輸入查詢區 -->
+        <div class="search-box">
+          <input type="text" id="input-char" maxlength="1" placeholder="輸入漢字" value="中" />
+          <button id="btn-search">查詢教學</button>
+        </div>
+
+        <!-- 描紅畫布區域（左上角顯示第幾劃） -->
         <div class="canvas-container">
-          <!-- 米字格背景會用 CSS 畫，Canvas 只負責筆觸 -->
+          <div id="stroke-badge" class="stroke-badge">準備</div>
           <canvas id="trace-canvas"></canvas>
         </div>
         
+        <!-- 筆順播放教學控制器 -->
+        <div class="playback-controls">
+          <button id="btn-prev-stroke">上一劃</button>
+          <button id="btn-play-pause">▶ 播放示範</button>
+          <button id="btn-next-stroke">下一劃</button>
+          <button id="btn-replay">重播全字</button>
+        </div>
+
+        <!-- 練習與描紅操作 -->
         <div class="controls">
-          <button id="btn-clear">清除畫布</button>
-          <button id="btn-next">下一個字</button>
+          <button id="btn-clear">清除筆跡描紅</button>
+          <button id="btn-next">隨機練習字</button>
         </div>
       </main>
     </div>
     
-    <!-- 引入主程式邏輯 -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
