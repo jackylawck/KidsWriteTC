@@ -1,4 +1,10 @@
 /* src/style.css */
+
+/* P3 修正：加入 color-scheme 防止深色模式下控制項反白 */
+:root {
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -7,7 +13,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang HK", "Microsoft JhengHei", sans-serif;
   margin: 0;
   padding: 20px;
-  background-color: #fdfaf2; /* EDB 溫和護眼底色 */
+  background-color: #fdfaf2;
   color: #333;
   display: flex;
   flex-direction: column;
@@ -19,34 +25,45 @@ header {
   margin-bottom: 20px;
 }
 
-/* 頂部搜尋列 */
+.lang-selector {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.lang-selector button[aria-checked="true"] {
+  background-color: #e0f2f1;
+  border-color: #00897b;
+  color: #00695c;
+  font-weight: bold;
+}
+
 .search-section {
   display: flex;
   justify-content: center;
   margin-bottom: 24px;
 }
 
+/* P1 修正：搜尋列彈性寬度適應中英文 */
 .search-bar {
   display: flex;
   align-items: center;
-  background-color: #8b0000; /* EDB 棗紅風格 */
+  background-color: #8b0000;
   border-radius: 6px;
   padding: 4px 6px;
   gap: 6px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-.search-label {
-  color: #fff;
-  font-size: 14px;
-  font-weight: bold;
-  padding: 0 6px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .search-bar input {
-  width: 60px;
+  min-width: 140px;
+  width: 100%;
+  max-width: 200px;
   height: 32px;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: bold;
   text-align: center;
   border: 1px solid #ccc;
@@ -64,8 +81,7 @@ header {
   cursor: pointer;
 }
 
-/* 主展示區：左右並排佈局 */
-.edb-display-container {
+.main-display-grid {
   display: flex;
   flex-direction: row;
   gap: 28px;
@@ -76,56 +92,88 @@ header {
   box-shadow: 0 4px 16px rgba(0,0,0,0.06);
 }
 
-@media (max-width: 720px) {
-  .edb-display-container {
-    flex-direction: column;
-    align-items: center;
-  }
-}
-
-/* 左側米字格畫布 */
 .canvas-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+  max-width: 300px;
 }
 
+/* P0 修正：使用 display: none 避免佔據佈局空間，配合 keyframes 實現流暢淡入 */
+.warning-banner {
+  display: none;
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.warning-banner.visible {
+  display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.warning-banner.warning-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+}
+
+/* P2 修正：自適應長寬比，防止小螢幕溢出 */
 .canvas-container {
-  width: 300px;
-  height: 300px;
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 1 / 1;
+  height: auto;
   border: 2px solid #b71c1c;
   background-color: #fff;
   position: relative;
-  /* 標準米字格 */
-  background-image: 
-    linear-gradient(to bottom, transparent 49.5%, #ffcdd2 49.5%, #ffcdd2 50.5%, transparent 50.5%),
-    linear-gradient(to right, transparent 49.5%, #ffcdd2 49.5%, #ffcdd2 50.5%, transparent 50.5%),
-    linear-gradient(45deg, transparent 49.5%, #ffebee 49.5%, #ffebee 50.5%, transparent 50.5%),
-    linear-gradient(-45deg, transparent 49.5%, #ffebee 49.5%, #ffebee 50.5%, transparent 50.5%);
   overflow: hidden;
 }
 
+/* P0 修正：使用 inset: 0 自動填滿 Content Box */
+.canvas-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.trace-layer {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.ink-layer {
+  z-index: 2;
+  touch-action: none;
+}
+
+/* P3 修正：縮小徽章尺寸，減少字形干擾 */
 .stroke-badge {
   position: absolute;
   top: 8px;
   left: 12px;
-  font-size: 26px;
+  font-size: 18px;
   font-weight: bold;
-  color: #111;
+  color: #666;
   z-index: 10;
   pointer-events: none;
   font-family: Arial, sans-serif;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
 
-canvas {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-/* 右下角圓形播放按鈕 (仿 EDB 綠色按鈕) */
+/* P2 修正：顏色對齊主題棗紅 */
 .play-bubble {
   position: absolute;
   bottom: 10px;
@@ -133,7 +181,7 @@ canvas {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: #2e7d32;
+  background-color: #8b0000;
   color: #fff;
   border: 2px solid #fff;
   box-shadow: 0 2px 5px rgba(0,0,0,0.3);
@@ -147,13 +195,16 @@ canvas {
 
 .playback-controls {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
   margin-top: 14px;
 }
 
-/* 右側屬性資訊卡 */
+/* P2 修正：Meta 資訊卡自適應寬度 */
 .meta-card {
-  width: 280px;
+  width: 100%;
+  max-width: 280px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -248,7 +299,64 @@ button {
   font-size: 13px;
 }
 
+button:hover {
+  background-color: #f5f5f5;
+}
+
+/* P1 修正：明確且合規的 focus-visible 焦點環 */
+button:focus-visible, 
+.search-bar input:focus-visible {
+  outline: 2px solid #0288d1;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .btn-danger {
   color: #c62828;
   border-color: #ef9a9a;
+}
+
+.btn-danger:hover {
+  background-color: #ffebee;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* P1 修正：無障礙動效保護 (尊重減少動畫偏好) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* RWD 斷點設定 */
+@media (max-width: 720px) {
+  .main-display-grid {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-bar input {
+    min-width: 100px;
+  }
 }
