@@ -1,6 +1,6 @@
 // src/main.ts
 import './style.css';
-import { i18n, Locale } from './core/i18n';
+import { i18n } from './core/i18n';
 import { TraceCanvas, StrokeData } from './ui/canvas-trace';
 
 interface ManifestItem {
@@ -10,89 +10,90 @@ interface ManifestItem {
 }
 
 function initApp() {
-  // 1. 初始化描紅畫布
-  const traceCanvas = new TraceCanvas('trace-canvas');
+  const traceCanvas = new TraceCanvas('trace-canvas', 'stroke-badge');
   let charList: ManifestItem[] = [];
   let currentIndex = 0;
-
-  // 取得 Vite 設定的 base 路徑（支援本機與 GitHub Pages）
   const baseUrl = import.meta.env.BASE_URL;
 
-  // 載入指定索引的漢字分片資料
-  const loadCharacterByIndex = async (index: number) => {
-    if (charList.length === 0) return;
-    const item = charList[index];
+  // 1. 根據 Unicode 載入字元分片
+  const loadCharacterByUnicode = async (unicode: string) => {
     try {
-      const res = await fetch(`${baseUrl}data/${item.unicode}.json`);
-      if (!res.ok) throw new Error(`載入失敗: ${res.statusText}`);
+      const res = await fetch(`${baseUrl}data/${unicode.toUpperCase()}.json`);
+      if (!res.ok) throw new Error('找不到該字');
       const data: StrokeData = await res.json();
       traceCanvas.loadCharacter(data);
-    } catch (err) {
-      console.error('無法載入字詞分片:', err);
+    } catch {
+      alert(`暫無此字資料。目前支援內置示範字（如：中、大、小、人、一）`);
     }
   };
 
-  // 2. 初始化載入字庫索引清單
+  // 2. 載入索引庫
   fetch(`${baseUrl}data/manifest.json`)
-    .then(res => {
-      if (!res.ok) throw new Error(`無法載入 manifest: ${res.statusText}`);
-      return res.json();
-    })
+    .then(r => r.json())
     .then((list: ManifestItem[]) => {
       charList = list;
-      if (charList.length > 0) {
-        loadCharacterByIndex(0); // 預設顯示第一個字（例如「一」）
-      }
+      // 預設載入「中」字 (4E2D)
+      const defaultItem = charList.find(c => c.char === '中') || charList[0];
+      if (defaultItem) loadCharacterByUnicode(defaultItem.unicode);
     })
-    .catch(err => console.error('無法取得字庫清單:', err));
+    .catch(console.error);
 
-  // 3. 綁定清除畫布按鈕
-  const btnClear = document.getElementById('btn-clear');
-  if (btnClear) {
-    btnClear.addEventListener('click', () => traceCanvas.clear());
-  }
+  // 3. 輸入字查詢功能
+  const inputChar = document.getElementById('input-char') as HTMLInputElement;
+  const btnSearch = document.getElementById('btn-search');
 
-  // 4. 綁定「下一個字」切換按鈕
-  const btnNext = document.getElementById('btn-next');
-  if (btnNext) {
-    btnNext.addEventListener('click', () => {
-      if (charList.length === 0) return;
-      currentIndex = (currentIndex + 1) % charList.length;
-      loadCharacterByIndex(currentIndex);
+  const handleSearch = () => {
+    const val = inputChar.value.trim();
+    if (!val) return;
+    const unicode = val.charCodeAt(0).toString(16).toUpperCase();
+    loadCharacterByUnicode(unicode);
+  };
+
+  btnSearch?.addEventListener('click', handleSearch);
+  inputChar?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleSearch();
+  });
+
+  // 4. 筆順動畫播放器控制項
+  const btnPlayPause = document.getElementById('btn-play-pause') as HTMLButtonElement;
+  btnPlayPause?.addEventListener('click', () => {
+    const isPlaying = traceCanvas.toggleAutoPlay(() => {
+      btnPlayPause.textContent = '▶ 播放示範';
     });
-  }
+    btnPlayPause.textContent = isPlaying ? '⏸ 暫停' : '▶ 播放示範';
+  });
 
-  // 5. 綁定語系切換按鈕
-  const langButtons = document.querySelectorAll('.lang-selector button');
-  langButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const target = e.target as HTMLButtonElement;
-      const lang = target.getAttribute('data-lang') as Locale;
-      if (lang) {
-        i18n.setLocale(lang);
-      }
+  document.getElementById('btn-prev-stroke')?.addEventListener('click', () => {
+    traceCanvas.stopAutoPlay();
+    btnPlayPause.textContent = '▶ 播放示範';
+    traceCanvas.prevStroke();
+  });
+
+  document.getElementById('btn-next-stroke')?.addEventListener('click', () => {
+    traceCanvas.stopAutoPlay();
+    btnPlayPause.textContent = '▶ 播放示範';
+    traceCanvas.nextStroke();
+  });
+
+  document.getElementById('btn-replay')?.addEventListener('click', () => {
+    btnPlayPause.textContent = '⏸ 暫停';
+    traceCanvas.startAutoPlay(() => {
+      btnPlayPause.textContent = '▶ 播放示範';
     });
   });
 
-  // 6. 畫面文字多國語言同步
-  const updateUIText = () => {
-    document.title = i18n.t('app.title');
-    const uiTitle = document.getElementById('ui-title');
-    const uiDesc = document.getElementById('ui-desc');
-    const uiBtnClear = document.getElementById('btn-clear');
-    const uiBtnNext = document.getElementById('btn-next');
+  // 5. 描紅練習控制
+  document.getElementById('btn-clear')?.addEventListener('click', () => traceCanvas.clear());
 
-    if (uiTitle) uiTitle.textContent = i18n.t('app.title');
-    if (uiDesc) uiDesc.textContent = i18n.t('app.description');
-    if (uiBtnClear) uiBtnClear.textContent = i18n.t('ui.button.clear');
-    if (uiBtnNext) uiBtnNext.textContent = i18n.t('ui.button.next');
-  };
-
-  i18n.subscribe(updateUIText);
-  updateUIText();
+  document.getElementById('btn-next')?.addEventListener('click', () => {
+    if (charList.length === 0) return;
+    currentIndex = (currentIndex + 1) % charList.length;
+    const item = charList[currentIndex];
+    inputChar.value = item.char;
+    loadCharacterByUnicode(item.unicode);
+  });
 }
 
-// 防禦性 DOM 掛載
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
 } else {
