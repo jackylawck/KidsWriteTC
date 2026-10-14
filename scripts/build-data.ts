@@ -3,87 +3,25 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const OUTPUT_DIR = path.resolve(process.cwd(), 'public/data');
+// 指向 pnpm 安裝的開源毛筆 SVG 數據庫
+const HANZI_DATA_DIR = path.resolve(process.cwd(), 'node_modules/hanzi-writer-data');
 
-export interface FullCharData {
-  char: string;
-  unicode: string;
-  radical: string;       // 部首（例如 "丨 部"）
-  totalStrokes: number;  // 總筆畫數
-  cantonese: {
-    jyutping: string;    // 粵拼（例如 "zung1"）
-    homophone: string;   // 同音字（例如 "宗"）
-  };
-  mandarin: {
-    pinyin: string;      // 漢語拼音（例如 "zhōng"）
-  };
-  strokes: string[];     // 每一劃的獨立路徑
-}
-
-// 基礎示範字庫（符合香港學習字詞表標準）
-const CHAR_DATABASE: FullCharData[] = [
-  {
-    char: '中',
-    unicode: '4E2D',
-    radical: '丨 部',
-    totalStrokes: 4,
-    cantonese: { jyutping: 'zung1', homophone: '宗' },
-    mandarin: { pinyin: 'zhōng' },
-    strokes: [
-      'M 260 280 L 260 680',                      // 第 1 劃：豎
-      'M 260 290 L 740 290 L 740 670',             // 第 2 劃：橫折
-      'M 260 670 L 740 670',                      // 第 3 劃：橫
-      'M 500 130 L 500 870'                       // 第 4 劃：豎（貫穿）
-    ]
-  },
-  {
-    char: '一',
-    unicode: '4E00',
-    radical: '一 部',
-    totalStrokes: 1,
-    cantonese: { jyutping: 'jat1', homophone: '壹' },
-    mandarin: { pinyin: 'yī' },
-    strokes: [
-      'M 180 500 L 820 500'
-    ]
-  },
-  {
-    char: '人',
-    unicode: '4EBA',
-    radical: '人 部',
-    totalStrokes: 2,
-    cantonese: { jyutping: 'jan4', homophone: '銀' },
-    mandarin: { pinyin: 'rén' },
-    strokes: [
-      'M 500 180 Q 400 480 200 820',              // 第 1 劃：撇
-      'M 470 420 Q 620 640 820 820'               // 第 2 劃：捺
-    ]
-  },
-  {
-    char: '大',
-    unicode: '5927',
-    radical: '大 部',
-    totalStrokes: 3,
-    cantonese: { jyutping: 'daai6', homophone: '帶' },
-    mandarin: { pinyin: 'dà' },
-    strokes: [
-      'M 200 400 L 800 400',                      // 第 1 劃：橫
-      'M 500 180 Q 420 520 200 840',              // 第 2 劃：撇
-      'M 460 410 Q 620 630 820 840'               // 第 3 劃：捺
-    ]
-  },
-  {
-    char: '小',
-    unicode: '5C0F',
-    radical: '小 部',
-    totalStrokes: 3,
-    cantonese: { jyutping: 'siu2', homophone: '少' },
-    mandarin: { pinyin: 'xiǎo' },
-    strokes: [
-      'M 500 180 L 500 760 Q 500 830 430 800',    // 第 1 劃：豎鈎（先中間）
-      'M 330 450 Q 250 580 220 680',              // 第 2 劃：左點（後兩邊）
-      'M 670 450 Q 750 580 780 680'               // 第 3 劃：右點
-    ]
-  }
+// 香港教育局 (EDB) 字典清單擴充 (此處可隨時加至 3000 字)
+const EDB_DICT = [
+  { char: '中', radical: '丨 部', strokes: 4, jyutping: 'zung1', pinyin: 'zhōng' },
+  { char: '一', radical: '一 部', strokes: 1, jyutping: 'jat1', pinyin: 'yī' },
+  { char: '人', radical: '人 部', strokes: 2, jyutping: 'jan4', pinyin: 'rén' },
+  { char: '大', radical: '大 部', strokes: 3, jyutping: 'daai6', pinyin: 'dà' },
+  { char: '小', radical: '小 部', strokes: 3, jyutping: 'siu2', pinyin: 'xiǎo' },
+  { char: '口', radical: '口 部', strokes: 3, jyutping: 'hau2', pinyin: 'kǒu' },
+  { char: '日', radical: '日 部', strokes: 4, jyutping: 'jat6', pinyin: 'rì' },
+  { char: '月', radical: '月 部', strokes: 4, jyutping: 'jyut6', pinyin: 'yuè' },
+  { char: '木', radical: '木 部', strokes: 4, jyutping: 'muk6', pinyin: 'mù' },
+  { char: '水', radical: '水 部', strokes: 4, jyutping: 'seoi2', pinyin: 'shuǐ' },
+  { char: '火', radical: '火 部', strokes: 4, jyutping: 'fo2', pinyin: 'huǒ' },
+  { char: '土', radical: '土 部', strokes: 3, jyutping: 'tou2', pinyin: 'tǔ' },
+  { char: '上', radical: '一 部', strokes: 3, jyutping: 'soeng6', pinyin: 'shàng' },
+  { char: '下', radical: '一 部', strokes: 3, jyutping: 'haa6', pinyin: 'xià' }
 ];
 
 function build() {
@@ -93,22 +31,35 @@ function build() {
 
   const manifest: Array<{ char: string; unicode: string }> = [];
 
-  for (const item of CHAR_DATABASE) {
-    fs.writeFileSync(
-      path.join(OUTPUT_DIR, `${item.unicode}.json`),
-      JSON.stringify(item, null, 2),
-      'utf-8'
-    );
-    manifest.push({ char: item.char, unicode: item.unicode });
+  for (const item of EDB_DICT) {
+    const unicode = item.char.charCodeAt(0).toString(16).toUpperCase();
+    const sourcePath = path.join(HANZI_DATA_DIR, `${item.char}.json`);
+    
+    // 檢查開源庫中是否有這個字的毛筆 SVG
+    if (!fs.existsSync(sourcePath)) {
+      console.warn(`⚠️ 找不到「${item.char}」的毛筆數據，已跳過。`);
+      continue;
+    }
+
+    // 讀取真實毛筆 SVG 輪廓數據
+    const hwData = JSON.parse(fs.readFileSync(sourcePath, 'utf-8'));
+    
+    const fullData = {
+      char: item.char,
+      unicode,
+      radical: item.radical,
+      totalStrokes: item.strokes,
+      cantonese: { jyutping: item.jyutping, homophone: item.char },
+      mandarin: { pinyin: item.pinyin },
+      strokes: hwData.strokes // <== 注入真實的毛筆輪廓 Path
+    };
+
+    fs.writeFileSync(path.join(OUTPUT_DIR, `${unicode}.json`), JSON.stringify(fullData, null, 2));
+    manifest.push({ char: item.char, unicode });
   }
 
-  fs.writeFileSync(
-    path.join(OUTPUT_DIR, 'manifest.json'),
-    JSON.stringify(manifest, null, 2),
-    'utf-8'
-  );
-
-  console.log(`✅ 成功建置 ${CHAR_DATABASE.length} 個字詞之 EDB 元數據與筆順分片！`);
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  console.log(`✅ 成功建置 ${manifest.length} 個字詞的毛筆筆順分片！`);
 }
 
 build();
