@@ -4,7 +4,7 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "strict": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -15,5 +15,11 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
   },
-  "include": ["src", "data", "tests"]
+  "include": [
+    "src",
+    "scripts",
+    "tests",
+    "data",
+    "vite.config.ts"
+  ]
 }
