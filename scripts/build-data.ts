@@ -1,96 +1,114 @@
+// scripts/build-data.ts
 import fs from 'node:fs';
 import path from 'node:path';
 
-// 定義輸出目錄 (Vite 打包時會將 public/ 完整複製到 dist/)
 const OUTPUT_DIR = path.resolve(process.cwd(), 'public/data');
 
-// 基礎啟動字庫範本 (確保離線與初次載入具備標準繁體筆順數據)
-interface StrokeData {
+export interface FullCharData {
   char: string;
   unicode: string;
-  totalStrokes: number;
-  strokes: string[]; // SVG Path 或切向量軌跡
+  radical: string;       // 部首（例如 "丨 部"）
+  totalStrokes: number;  // 總筆畫數
+  cantonese: {
+    jyutping: string;    // 粵拼（例如 "zung1"）
+    homophone: string;   // 同音字（例如 "宗"）
+  };
+  mandarin: {
+    pinyin: string;      // 漢語拼音（例如 "zhōng"）
+  };
+  strokes: string[];     // 每一劃的獨立路徑
 }
 
-// 核心繁體示範字集（符合香港小學中文學習字詞表基礎字）
-const INITIAL_CHAR_SET: StrokeData[] = [
+// 基礎示範字庫（符合香港學習字詞表標準）
+const CHAR_DATABASE: FullCharData[] = [
+  {
+    char: '中',
+    unicode: '4E2D',
+    radical: '丨 部',
+    totalStrokes: 4,
+    cantonese: { jyutping: 'zung1', homophone: '宗' },
+    mandarin: { pinyin: 'zhōng' },
+    strokes: [
+      'M 260 280 L 260 680',                      // 第 1 劃：豎
+      'M 260 290 L 740 290 L 740 670',             // 第 2 劃：橫折
+      'M 260 670 L 740 670',                      // 第 3 劃：橫
+      'M 500 130 L 500 870'                       // 第 4 劃：豎（貫穿）
+    ]
+  },
   {
     char: '一',
     unicode: '4E00',
+    radical: '一 部',
     totalStrokes: 1,
+    cantonese: { jyutping: 'jat1', homophone: '壹' },
+    mandarin: { pinyin: 'yī' },
     strokes: [
-      'M 150 500 L 850 500'
+      'M 180 500 L 820 500'
     ]
   },
   {
     char: '人',
     unicode: '4EBA',
+    radical: '人 部',
     totalStrokes: 2,
+    cantonese: { jyutping: 'jan4', homophone: '銀' },
+    mandarin: { pinyin: 'rén' },
     strokes: [
-      'M 500 200 Q 400 500 200 800',
-      'M 460 450 Q 600 650 800 800'
-    ]
-  },
-  {
-    char: '中',
-    unicode: '4E2D',
-    totalStrokes: 4,
-    strokes: [
-      'M 250 300 L 250 650',
-      'M 250 300 L 750 300 L 750 650',
-      'M 250 650 L 750 650',
-      'M 500 150 L 500 850'
+      'M 500 180 Q 400 480 200 820',              // 第 1 劃：撇
+      'M 470 420 Q 620 640 820 820'               // 第 2 劃：捺
     ]
   },
   {
     char: '大',
     unicode: '5927',
+    radical: '大 部',
     totalStrokes: 3,
+    cantonese: { jyutping: 'daai6', homophone: '帶' },
+    mandarin: { pinyin: 'dà' },
     strokes: [
-      'M 200 400 L 800 400',
-      'M 500 200 Q 420 550 200 850',
-      'M 460 420 Q 620 650 820 850'
+      'M 200 400 L 800 400',                      // 第 1 劃：橫
+      'M 500 180 Q 420 520 200 840',              // 第 2 劃：撇
+      'M 460 410 Q 620 630 820 840'               // 第 3 劃：捺
     ]
   },
   {
     char: '小',
     unicode: '5C0F',
+    radical: '小 部',
     totalStrokes: 3,
+    cantonese: { jyutping: 'siu2', homophone: '少' },
+    mandarin: { pinyin: 'xiǎo' },
     strokes: [
-      'M 500 200 L 500 750 Q 500 820 440 800',
-      'M 350 450 Q 250 600 220 700',
-      'M 650 450 Q 750 600 780 700'
+      'M 500 180 L 500 760 Q 500 830 430 800',    // 第 1 劃：豎鈎（先中間）
+      'M 330 450 Q 250 580 220 680',              // 第 2 劃：左點（後兩邊）
+      'M 670 450 Q 750 580 780 680'               // 第 3 劃：右點
     ]
   }
 ];
 
-function buildData() {
-  console.log('🚀 開始建置漢字筆順分片數據...');
-
-  // 1. 確保 public/data 目錄存在
+function build() {
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
-  // 2. 獨立輸出個別漢字分片 JSON (按需載入，落實 CSP 與零記憶體浪費)
-  const manifest: Array<{ char: string; unicode: string; totalStrokes: number }> = [];
+  const manifest: Array<{ char: string; unicode: string }> = [];
 
-  for (const item of INITIAL_CHAR_SET) {
-    const filePath = path.join(OUTPUT_DIR, `${item.unicode}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(item, null, 2), 'utf-8');
-    
-    manifest.push({
-      char: item.char,
-      unicode: item.unicode,
-      totalStrokes: item.totalStrokes
-    });
+  for (const item of CHAR_DATABASE) {
+    fs.writeFileSync(
+      path.join(OUTPUT_DIR, `${item.unicode}.json`),
+      JSON.stringify(item, null, 2),
+      'utf-8'
+    );
+    manifest.push({ char: item.char, unicode: item.unicode });
   }
 
-  // 3. 輸出字庫總索引清單 manifest.json
-  const manifestPath = path.join(OUTPUT_DIR, 'manifest.json');
-  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+  fs.writeFileSync(
+    path.join(OUTPUT_DIR, 'manifest.json'),
+    JSON.stringify(manifest, null, 2),
+    'utf-8'
+  );
 
-  console.log(`✅ 成功產出 ${INITIAL_CHAR_SET.length} 個漢字獨立分片與 manifest.json 至 public/data/`);
+  console.log(`✅ 成功建置 ${CHAR_DATABASE.length} 個字詞之 EDB 元數據與筆順分片！`);
 }
 
-buildData();
+build();
