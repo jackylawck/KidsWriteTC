@@ -4,7 +4,7 @@ export interface StrokeData {
   char: string;
   unicode: string;
   totalStrokes: number;
-  strokes: string[]; // 每一筆的向量幾何路徑
+  strokes: string[]; // 開源真實毛筆 SVG 輪廓路徑
 }
 
 export class TraceCanvas {
@@ -14,7 +14,7 @@ export class TraceCanvas {
   private dpr: number = 1;
 
   private currentData: StrokeData | null = null;
-  public currentStrokeIndex: number = 0; // 當前教到第幾劃 (0 代表全部只出底字)
+  public currentStrokeIndex: number = 1; // 預設第 1 劃
   private isPlaying: boolean = false;
   private playTimer: number | null = null;
 
@@ -44,12 +44,12 @@ export class TraceCanvas {
   public loadCharacter(data: StrokeData) {
     this.stopAutoPlay();
     this.currentData = data;
-    this.currentStrokeIndex = 1; // 預設直接從第 1 劃開始教
+    this.currentStrokeIndex = 1; // 預設從第 1 劃開始
     this.render();
   }
 
   /**
-   * 核心繪製邏輯：仿教育局視覺呈現
+   * 核心繪製邏輯：適配真實毛筆字形填充與座標轉換
    */
   public render() {
     const rect = this.canvas.getBoundingClientRect();
@@ -62,49 +62,37 @@ export class TraceCanvas {
 
     if (!this.currentData) return;
 
-    // 2. 更新左上角第幾劃指示標籤
+    // 2. 更新左上角第幾劃標籤 (仿 EDB: 顯示 1, 2, 3...)
     if (this.strokeBadge) {
-      this.strokeBadge.textContent = `${this.currentStrokeIndex} / ${this.currentData.totalStrokes}`;
+      this.strokeBadge.textContent = `${this.currentStrokeIndex}`;
     }
 
-    // 3. 繪製淺灰色全字底模（作為參照背景）
-    this.ctx.save();
-    this.ctx.scale(this.dpr, this.dpr);
-    this.ctx.font = `${rect.width * 0.76}px "Kaiti TC", "STKaiti", "BiauKai", "DFKai-SB", serif`;
-    this.ctx.fillStyle = '#f0f0f0';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(this.currentData.char, rect.width / 2, rect.height / 2 + 10);
-    this.ctx.restore();
-
-    // 4. 根據筆順進度繪製筆劃
-    const scaleFactor = (rect.width / 1000) * this.dpr;
+    // 3. 繪製真實毛筆字形
+    // hanzi-writer-data 基準座標系為 1024x1024，Y 軸為向上正向
+    const scaleFactor = (rect.width / 1024) * this.dpr;
 
     this.currentData.strokes.forEach((strokePath, index) => {
       const strokeNumber = index + 1;
       const path = new Path2D(strokePath);
 
       this.ctx.save();
+      // 適配 1024 倒轉座標系
       this.ctx.scale(scaleFactor, scaleFactor);
-      this.ctx.lineCap = 'round';
-      this.ctx.lineJoin = 'round';
+      this.ctx.translate(0, 1024);
+      this.ctx.scale(1, -1);
 
       if (strokeNumber < this.currentStrokeIndex) {
-        // A. 以前已經教過/寫完的筆劃：深黑色實線
-        this.ctx.strokeStyle = '#212121';
-        this.ctx.lineWidth = 42;
-        this.ctx.stroke(path);
+        // A. 之前已經寫完的筆劃：深黑色毛筆實體
+        this.ctx.fillStyle = '#212121';
+        this.ctx.fill(path);
       } else if (strokeNumber === this.currentStrokeIndex) {
-        // B. 當前正在教學的筆劃（第 N 劃）：鮮明硃砂紅高亮
-        this.ctx.strokeStyle = '#d32f2f';
-        this.ctx.lineWidth = 48;
-        this.ctx.stroke(path);
+        // B. 當前正在教學的筆劃（第 N 劃）：硃砂紅高亮示範
+        this.ctx.fillStyle = '#d32f2f';
+        this.ctx.fill(path);
       } else {
-        // C. 未來的筆劃：淡灰色虛線（不搶視覺焦點）
-        this.ctx.strokeStyle = '#e0e0e0';
-        this.ctx.lineWidth = 20;
-        this.ctx.setLineDash([16, 12]);
-        this.ctx.stroke(path);
+        // C. 未來的筆劃：淺灰色毛筆底模（提示整體字形結構）
+        this.ctx.fillStyle = '#e5e5e5';
+        this.ctx.fill(path);
       }
 
       this.ctx.restore();
@@ -129,7 +117,7 @@ export class TraceCanvas {
     }
   }
 
-  // 自動播放筆順示範 (如同教育局動態效果)
+  // 播放 / 暫停
   public toggleAutoPlay(onComplete?: () => void) {
     if (this.isPlaying) {
       this.stopAutoPlay();
@@ -154,7 +142,7 @@ export class TraceCanvas {
         this.stopAutoPlay();
         if (onComplete) onComplete();
       }
-    }, 1100); // 每 1.1 秒示範下一劃
+    }, 1100);
   }
 
   public stopAutoPlay() {
@@ -169,7 +157,7 @@ export class TraceCanvas {
     this.render();
   }
 
-  // 自由描紅塗鴉事件
+  // 自由描紅塗鴉（小朋友拿手或 Apple Pencil 描寫）
   private bindEvents() {
     this.canvas.style.touchAction = 'none';
 
