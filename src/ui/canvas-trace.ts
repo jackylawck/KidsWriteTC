@@ -54,13 +54,13 @@ export class TraceCanvas {
     window.addEventListener('resize', () => {
       if (this.resizeTimer) clearTimeout(this.resizeTimer);
       this.resizeTimer = window.setTimeout(() => {
-        // 修正 P1：保留學生筆跡，避免旋轉 iPad 導致心血白費
+        // 保留學生筆跡，避免旋轉 iPad 導致心血白費
         const savedInk = this.inkCanvas.width > 0 && this.inkCanvas.height > 0
           ? this.inkCtx.getImageData(0, 0, this.inkCanvas.width, this.inkCanvas.height)
           : null;
 
         this.initRetinaDisplay();
-        if (this.currentData) this.renderTrace();
+        this.renderTrace();
 
         if (savedInk) {
           this.inkCtx.putImageData(savedInk, 0, 0);
@@ -84,7 +84,7 @@ export class TraceCanvas {
     
     const rect = this.inkCanvas.getBoundingClientRect();
     
-    // 修正 P0：無條件捨去，確保 Canvas 的像素緩衝區絕對是整數，避免跨平台 Retina 亞像素模糊
+    // 無條件捨去，確保 Canvas 的像素緩衝區絕對是整數，避免跨平台 Retina 亞像素模糊
     const w = Math.floor(rect.width);
     const h = Math.floor(rect.height);
     
@@ -116,9 +116,18 @@ export class TraceCanvas {
     this.renderTrace();
   }
 
+  // 統一的狀態清除出口，解決 404 時的狀態洩漏 (State Leak)
+  public clearData() {
+    this.stopAutoPlay();
+    this.currentData = null;
+    this._currentStrokeIndex = 1;
+    this.clearInk();
+    this.renderTrace();
+  }
+
   private drawGrid() {
     this.traceCtx.save();
-    // 修正 P2：加深網格線顏色，確保在白色背景上的清晰辨識度 (淡朱砂色)
+    // 加深網格線顏色，確保在白色背景上的清晰辨識度 (淡朱砂色)
     this.traceCtx.strokeStyle = '#E0A0A0';
     this.traceCtx.lineWidth = 3;
     
@@ -140,11 +149,14 @@ export class TraceCanvas {
     this.traceCtx.clearRect(0, 0, this.traceCanvas.width, this.traceCanvas.height);
     this.traceCtx.restore();
 
-    if (!this.currentData) return;
-
-    const total = this.currentData.totalStrokes || this.currentData.strokes.length;
+    // 統一在此處理 strokeBadge，徹底消除狀態洩漏
     if (this.strokeBadge) {
-      this.strokeBadge.textContent = `${this._currentStrokeIndex} / ${total}`;
+      if (this.currentData) {
+        const total = this.currentData.totalStrokes || this.currentData.strokes.length;
+        this.strokeBadge.textContent = `${this._currentStrokeIndex} / ${total}`;
+      } else {
+        this.strokeBadge.textContent = '- / -';
+      }
     }
 
     const scaleFactor = this.canvasWidth / 1024;
@@ -155,6 +167,12 @@ export class TraceCanvas {
     this.traceCtx.scale(1, -1);
 
     this.drawGrid();
+
+    // 無資料則提早返回 (米字格與 Badge 已正確設定)
+    if (!this.currentData) {
+      this.traceCtx.restore();
+      return;
+    }
 
     this.currentData.strokes.forEach((strokePath, index) => {
       const strokeNumber = index + 1;
@@ -249,7 +267,6 @@ export class TraceCanvas {
     const opts = { signal: this.abortController.signal };
     this.inkCanvas.style.touchAction = 'none';
 
-    // 依然保持即時獲取 DOMRect 避開 Y 軸滾動偏移，現代瀏覽器能將純讀取的 Reflow 優化到極致
     const getPos = (e: PointerEvent) => {
       const rect = this.inkCanvas.getBoundingClientRect();
       return {
@@ -282,9 +299,7 @@ export class TraceCanvas {
         this.inkCtx.closePath();
         this.isDrawing = false;
         
-        // 修正 P1：強制中斷防呆 (Ghost Stroke 防護)。
-        // 系統手勢 (如 iPad 多指上滑) 介入時，pointerId 會被 OS 回收，
-        // 缺乏 try/catch 會引發 DOMException，導致 isDrawing 卡死在 true。
+        // 強制中斷防呆 (Ghost Stroke 防護)
         try {
           if (this.inkCanvas.hasPointerCapture(e.pointerId)) {
             this.inkCanvas.releasePointerCapture(e.pointerId);
