@@ -25,7 +25,7 @@ const DICTIONARY: Dictionary = {
   'zh-HK': {
     'app.title': '童寫繁體字 KidsWriteTC',
     'app.description': '專為學童設計的繁體字筆順與描紅工具',
-    'ui.search.label': '直接輸入漢字',
+    'ui.search.placeholder': '輸入單字',
     'ui.search.button': '查詢',
     'ui.button.prev': '上一劃',
     'ui.button.next': '下一劃',
@@ -43,7 +43,7 @@ const DICTIONARY: Dictionary = {
   'zh-CN': {
     'app.title': '童写繁体字 KidsWriteTC',
     'app.description': '专为学童设计的繁体字笔顺与描红工具',
-    'ui.search.label': '直接输入汉字',
+    'ui.search.placeholder': '输入单字',
     'ui.search.button': '查询',
     'ui.button.prev': '上一划',
     'ui.button.next': '下一划',
@@ -61,7 +61,7 @@ const DICTIONARY: Dictionary = {
   'en': {
     'app.title': 'KidsWriteTC',
     'app.description': 'Stroke Order & Tracing Tool for Kids',
-    'ui.search.label': 'Enter Character',
+    'ui.search.placeholder': 'Enter character',
     'ui.search.button': 'Search',
     'ui.button.prev': 'Previous',
     'ui.button.next': 'Next',
