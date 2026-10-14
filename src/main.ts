@@ -20,9 +20,11 @@ interface ManifestData {
 }
 
 function initApp() {
+  // 初始化雙層畫布架構
   const traceCanvas = new TraceCanvas('trace-canvas', 'ink-canvas', 'stroke-badge');
   const baseUrl = import.meta.env.BASE_URL;
 
+  // DOM 元素選取
   const inputChar = document.getElementById('input-char') as HTMLInputElement;
   const btnSearch = document.getElementById('btn-search');
   const btnPlayBubble = document.getElementById('btn-play-bubble') as HTMLButtonElement;
@@ -33,8 +35,9 @@ function initApp() {
 
   let currentCharData: StrokeData | null = null;
   let appManifest: ManifestData | null = null;
-  let currentSearchController: AbortController | null = null; 
+  let currentSearchController: AbortController | null = null; // 防競態條件
 
+  // UI 警示橫幅控制器 (取代 alert)
   const showWarning = (message: string, isError: boolean = false) => {
     if (!elWarning) return;
     elWarning.textContent = message;
@@ -46,6 +49,7 @@ function initApp() {
     if (elWarning) elWarning.classList.remove('visible');
   };
 
+  // 預先載入 Manifest 索引
   const loadManifest = async () => {
     try {
       const res = await fetch(`${baseUrl}data/manifest.json`);
@@ -57,17 +61,18 @@ function initApp() {
     }
   };
 
-  // 修正：預先觸發 voices 載入 (Chrome / Safari 機制)
+  // 預先觸發 voices 載入 (解決 Chrome / Safari 非同步載入機制)
   if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices(); 
   }
 
+  // 原生語音合成播放 (加入 TTS 引擎防呆檢查)
   const speakText = (text: string, lang: 'zh-HK' | 'zh-CN') => {
     if (!('speechSynthesis' in window)) return;
     
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
-      // 修正：更寬鬆精準的 BCP-47 / 本地化標籤辨識
+      // 寬鬆精準的 BCP-47 / 本地化標籤辨識
       const targetLang = lang.toLowerCase();
       const hasVoice = voices.some(v => {
         const vLang = v.lang.replace('_', '-').toLowerCase();
@@ -87,10 +92,11 @@ function initApp() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
-    utterance.rate = 0.85; 
+    utterance.rate = 0.85; // 適度微調語速，便利學童跟讀
     window.speechSynthesis.speak(utterance);
   };
 
+  // 狀態與渲染解耦
   const setCurrentCharData = (data: StrokeData) => {
     currentCharData = data;
     renderMetaCard();
@@ -102,28 +108,32 @@ function initApp() {
     elTotalStrokes.textContent = `${strokesCount} ${i18n.t('ui.unit.strokes')}`;
   };
 
+  // 查詢漢字 (含競態條件防護與資料治理驗證)
   const searchAndLoad = async (char: string) => {
     if (!char) {
       inputChar?.focus();
       return;
     }
     
+    // 取消前一個正在進行的 Fetch 請求 (解決連續輸入時的競態覆蓋)
     if (currentSearchController) {
       currentSearchController.abort();
     }
     currentSearchController = new AbortController();
     const { signal } = currentSearchController;
 
+    // 支援擴展區漢字
     const codePoint = char.codePointAt(0);
     if (!codePoint) return;
     const unicode = codePoint.toString(16).toUpperCase().padStart(4, '0');
 
+    // 確保 manifest 已載入，否則報錯阻擋 (Fail-Safe)
     if (!appManifest) {
       showWarning(i18n.t('ui.alert.dataUnavailable') || '字庫索引載入失敗，請重整頁面', true);
       return;
     }
 
-    // 修正：防呆清空上一輪警示
+    // O(1) 查表並動態清理/顯示警示
     const entryMeta = appManifest.entries[unicode];
     if (!entryMeta) {
       hideWarning();
@@ -149,6 +159,7 @@ function initApp() {
         btnPlayBubble.setAttribute('aria-label', i18n.t('ui.button.play') || '播放');
       }
     } catch (err: unknown) {
+      // 忽略因使用者連續輸入而被 Abort 的請求
       if (err instanceof Error && err.name === 'AbortError') return;
       showWarning(i18n.t('ui.alert.notFound', { char }) || `找不到「${char}」的資料`, true);
     }
@@ -163,12 +174,14 @@ function initApp() {
     searchAndLoad(val);
   };
 
+  // === 事件綁定區 ===
+  
   btnSearch?.addEventListener('click', handleSearch);
   inputChar?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSearch();
   });
 
-  // 修正：動態切換 aria-label
+  // 動態切換 aria-label 的播放暫停按鈕
   btnPlayBubble?.addEventListener('click', () => {
     const isPlaying = traceCanvas.toggleAutoPlay(() => {
       btnPlayBubble.textContent = '▶';
@@ -199,7 +212,7 @@ function initApp() {
     traceCanvas.nextStroke();
   });
 
-  // 修正：拔除多餘呼叫，全交給 loadCharacter 內部重置
+  // 重播按鈕：交給 loadCharacter 內部重置所有狀態與筆跡
   document.getElementById('btn-replay')?.addEventListener('click', () => {
     if (!currentCharData) return;
     
@@ -229,12 +242,15 @@ function initApp() {
     if (currentCharData) speakText(currentCharData.char, 'zh-CN');
   });
 
+  // 多語系 DOM 即時刷新監聽
   const updateUITranslations = () => {
+    const titleEl = document.getElementById('ui-title');
+    if (titleEl) titleEl.textContent = i18n.t('app.title') || '童寫繁體字 KidsWriteTC';
+
     const descEl = document.getElementById('ui-desc');
     if (descEl) descEl.textContent = i18n.t('ui.description'); 
 
     if (inputChar) {
-      // 確保不存在時回傳空字串以啟動 fallback
       inputChar.placeholder = i18n.t('ui.search.placeholder') || '輸入單字';
     }
 
@@ -283,6 +299,7 @@ function initApp() {
     traceCanvas.destroy();
   });
 
+  // 語系按鈕事件：更新狀態並通知 i18n
   document.querySelectorAll('.lang-selector button').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const target = e.currentTarget as HTMLElement; 
@@ -296,7 +313,10 @@ function initApp() {
     });
   });
 
-  // P0 修正：不依賴 Object.values 順序，明確檢查 '上' 或 '一'
+  // === 初始啟動順序 ===
+  // 1. 初始化語系
+  // 2. 拉取 Manifest
+  // 3. 安全載入第一筆合法字 (排除擴展區陷阱)
   updateUITranslations();
   loadManifest().then(() => {
     if (inputChar) inputChar.value = '';
