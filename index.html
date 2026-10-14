@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 鎖定螢幕縮放，防止小朋友雙擊放大 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>KidsWriteTC</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1 id="ui-title">童寫繁體字 KidsWriteTC</h1>
+        <p id="ui-desc">專為香港小學生設計的純淨筆順描紅工具</p>
+        
+        <div class="lang-selector">
+          <button data-lang="zh-HK">繁體 (HK)</button>
+          <button data-lang="zh-CN">简体 (CN)</button>
+          <button data-lang="en">EN</button>
+        </div>
+      </header>
+      
+      <main>
+        <!-- 描紅畫布區域 -->
+        <div class="canvas-container">
+          <!-- 米字格背景會用 CSS 畫，Canvas 只負責筆觸 -->
+          <canvas id="trace-canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+          <button id="btn-clear">清除畫布</button>
+          <button id="btn-next">下一個字</button>
+        </div>
+      </main>
+    </div>
+    
+    <!-- 引入主程式邏輯 -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
