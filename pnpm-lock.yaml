@@ -169,6 +169,9 @@ importers:
       '@types/node':
         specifier: ^26.6.5
         version: 26.6.5
+      hanzi-writer-data:
+        specifier: ^2.0.1
+        version: 2.0.1
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -638,6 +641,9 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  hanzi-writer-data@2.0.1:
+    resolution: {integrity: sha512-nbQwM+MaryGoq7pBMIZLCd3lFq03nXuJuwku1+6UbjL58uU+9OULVcMkoNvNuJSoIV7f1bbPRfD4D/LQa5S7qg==}
 
   lightningcss-android-arm64@1.33.0:
     resolution: {integrity: sha512-gEpRTalKdosp4Bb8qWtc2iOgE5SeIHlpS1up9bFq2wAyYhl1UdTObYiHe98zEM9SQvSoqQZ1IQD0JNpg3Ml5pg==}
@@ -1133,6 +1139,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  hanzi-writer-data@2.0.1: {}
 
   lightningcss-android-arm64@1.33.0:
     optional: true
