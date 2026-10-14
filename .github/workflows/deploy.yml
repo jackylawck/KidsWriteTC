@@ -34,7 +34,7 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --allow-build=esbuild --config.strict-dep-builds=false
 
       - name: Build Data and App
         run: |
