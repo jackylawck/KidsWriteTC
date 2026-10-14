@@ -31,11 +31,13 @@ header {
   border-radius: 8px;
   margin-bottom: 20px;
   position: relative;
-  /* 簡單的米字格背景示意 */
+  /* 標準米字格背景（十字實線 + 雙對角虛線） */
   background-image: 
-    linear-gradient(to bottom, transparent 49%, #ffcdd2 49%, #ffcdd2 51%, transparent 51%),
-    linear-gradient(to right, transparent 49%, #ffcdd2 49%, #ffcdd2 51%, transparent 51%);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    linear-gradient(to bottom, transparent 49.5%, #ffcdd2 49.5%, #ffcdd2 50.5%, transparent 50.5%),
+    linear-gradient(to right, transparent 49.5%, #ffcdd2 49.5%, #ffcdd2 50.5%, transparent 50.5%),
+    linear-gradient(45deg, transparent 49.5%, #ffebee 49.5%, #ffebee 50.5%, transparent 50.5%),
+    linear-gradient(-45deg, transparent 49.5%, #ffebee 49.5%, #ffebee 50.5%, transparent 50.5%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
@@ -45,6 +47,7 @@ canvas {
   position: absolute;
   top: 0;
   left: 0;
+  cursor: crosshair;
 }
 
 button {
@@ -55,7 +58,7 @@ button {
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 button:hover {
@@ -67,4 +70,9 @@ button:hover {
 button#btn-clear {
   color: #d32f2f;
   border-color: #ef9a9a;
+}
+
+button#btn-clear:hover {
+  background-color: #ffebee;
+  border-color: #d32f2f;
 }
