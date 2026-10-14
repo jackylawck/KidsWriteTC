@@ -26,11 +26,11 @@ export class TraceCanvas {
 
   private isPlaying: boolean = false;
   private playTimer: number | null = null;
-  private strokeInterval: number = 1100; // 可配置播放間隔
+  private strokeInterval: number = 1100;
   private isDrawing: boolean = false;
 
   private dpr: number = 1;
-  private cachedRect: DOMRect | null = null;
+  private canvasWidth: number = 300; 
   private abortController = new AbortController();
   private resizeTimer: number | null = null;
 
@@ -44,7 +44,6 @@ export class TraceCanvas {
     this.traceCtx = this.traceCanvas.getContext('2d')!;
     
     this.inkCanvas = inkEl;
-    // 重啟 GPU 加速 (不使用 willReadFrequently)
     this.inkCtx = this.inkCanvas.getContext('2d')!;
     
     this.strokeBadge = document.getElementById(badgeId);
@@ -52,12 +51,20 @@ export class TraceCanvas {
     this.initRetinaDisplay();
     this.bindEvents();
 
-    // Resize 監聽與防抖 (Debounce)
     window.addEventListener('resize', () => {
       if (this.resizeTimer) clearTimeout(this.resizeTimer);
       this.resizeTimer = window.setTimeout(() => {
+        // 修正 P1：保留學生筆跡，避免旋轉 iPad 導致心血白費
+        const savedInk = this.inkCanvas.width > 0 && this.inkCanvas.height > 0
+          ? this.inkCtx.getImageData(0, 0, this.inkCanvas.width, this.inkCanvas.height)
+          : null;
+
         this.initRetinaDisplay();
         if (this.currentData) this.renderTrace();
+
+        if (savedInk) {
+          this.inkCtx.putImageData(savedInk, 0, 0);
+        }
       }, 150);
     }, { signal: this.abortController.signal });
   }
@@ -74,31 +81,30 @@ export class TraceCanvas {
 
   private initRetinaDisplay() {
     this.dpr = window.devicePixelRatio || 1;
-    const rect = this.inkCanvas.parentElement!.getBoundingClientRect();
-    this.cachedRect = rect;
-
-    const w = rect.width;
-    const h = rect.height;
+    
+    const rect = this.inkCanvas.getBoundingClientRect();
+    
+    // 修正 P0：無條件捨去，確保 Canvas 的像素緩衝區絕對是整數，避免跨平台 Retina 亞像素模糊
+    const w = Math.floor(rect.width);
+    const h = Math.floor(rect.height);
+    
+    this.canvasWidth = w;
 
     [this.traceCanvas, this.inkCanvas].forEach(canvas => {
-      canvas.width = w * this.dpr;
-      canvas.height = h * this.dpr;
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
+      canvas.width = Math.floor(w * this.dpr);
+      canvas.height = Math.floor(h * this.dpr);
     });
 
-    // P0 修復：徹底清除任何歷史矩陣殘留，防止累積縮放
     this.traceCtx.setTransform(1, 0, 0, 1, 0, 0);
     this.traceCtx.scale(this.dpr, this.dpr);
     
     this.inkCtx.setTransform(1, 0, 0, 1, 0, 0);
     this.inkCtx.scale(this.dpr, this.dpr);
 
-    // 重新註冊畫筆狀態
     this.inkCtx.lineCap = 'round';
     this.inkCtx.lineJoin = 'round';
     this.inkCtx.lineWidth = 16;
-    this.inkCtx.strokeStyle = 'rgba(25, 118, 210, 0.85)'; // 學生筆跡深藍色
+    this.inkCtx.strokeStyle = 'rgba(25, 118, 210, 0.85)';
   }
 
   public loadCharacter(data: StrokeData) {
@@ -112,14 +118,13 @@ export class TraceCanvas {
 
   private drawGrid() {
     this.traceCtx.save();
-    this.traceCtx.strokeStyle = '#FFEBEE'; // 淡淡的粉紅色米字線
-    this.traceCtx.lineWidth = 4; // 1024 座標系下的線寬
+    // 修正 P2：加深網格線顏色，確保在白色背景上的清晰辨識度 (淡朱砂色)
+    this.traceCtx.strokeStyle = '#E0A0A0';
+    this.traceCtx.lineWidth = 3;
     
     this.traceCtx.beginPath();
-    // 橫豎中線
     this.traceCtx.moveTo(0, 512); this.traceCtx.lineTo(1024, 512);
     this.traceCtx.moveTo(512, 0); this.traceCtx.lineTo(512, 1024);
-    // 對角線
     this.traceCtx.moveTo(0, 0); this.traceCtx.lineTo(1024, 1024);
     this.traceCtx.moveTo(1024, 0); this.traceCtx.lineTo(0, 1024);
     
@@ -128,7 +133,7 @@ export class TraceCanvas {
   }
 
   public renderTrace() {
-    if (!this.cachedRect) return;
+    if (!this.canvasWidth) return;
 
     this.traceCtx.save();
     this.traceCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -142,14 +147,13 @@ export class TraceCanvas {
       this.strokeBadge.textContent = `${this._currentStrokeIndex} / ${total}`;
     }
 
-    const scaleFactor = this.cachedRect.width / 1024;
+    const scaleFactor = this.canvasWidth / 1024;
     
     this.traceCtx.save();
     this.traceCtx.scale(scaleFactor, scaleFactor);
     this.traceCtx.translate(0, 1024);
     this.traceCtx.scale(1, -1);
 
-    // 繪製背景米字格
     this.drawGrid();
 
     this.currentData.strokes.forEach((strokePath, index) => {
@@ -159,11 +163,11 @@ export class TraceCanvas {
         const path = new Path2D(strokePath);
 
         if (strokeNumber < this._currentStrokeIndex) {
-          this.traceCtx.fillStyle = '#424242'; // 已完成筆劃：深灰
+          this.traceCtx.fillStyle = '#424242'; 
         } else if (strokeNumber === this._currentStrokeIndex) {
-          this.traceCtx.fillStyle = '#d32f2f'; // 當前示範筆劃：硃砂紅
+          this.traceCtx.fillStyle = '#d32f2f'; 
         } else {
-          this.traceCtx.fillStyle = '#e0e0e0'; // 未來筆劃：淺灰提示
+          this.traceCtx.fillStyle = '#e0e0e0'; 
         }
         
         this.traceCtx.fill(path);
@@ -241,15 +245,13 @@ export class TraceCanvas {
     this.inkCtx.restore();
   }
 
-  /**
-   * P3 升級：全面採用 Pointer Events，天然支援觸控、滑鼠與 Apple Pencil
-   */
   private bindEvents() {
     const opts = { signal: this.abortController.signal };
     this.inkCanvas.style.touchAction = 'none';
 
+    // 依然保持即時獲取 DOMRect 避開 Y 軸滾動偏移，現代瀏覽器能將純讀取的 Reflow 優化到極致
     const getPos = (e: PointerEvent) => {
-      const rect = this.cachedRect || this.inkCanvas.getBoundingClientRect();
+      const rect = this.inkCanvas.getBoundingClientRect();
       return {
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
@@ -258,7 +260,7 @@ export class TraceCanvas {
 
     const start = (e: PointerEvent) => {
       e.preventDefault();
-      this.inkCanvas.setPointerCapture(e.pointerId); // 鎖定游標
+      this.inkCanvas.setPointerCapture(e.pointerId);
       this.isDrawing = true;
       const pos = getPos(e);
       this.inkCtx.beginPath();
@@ -268,9 +270,6 @@ export class TraceCanvas {
     const move = (e: PointerEvent) => {
       e.preventDefault();
       if (!this.isDrawing) return;
-      
-      // 預留 Apple Pencil 壓力判定 (未來擴展)
-      // if (e.pointerType === 'pen') { this.inkCtx.lineWidth = 16 * e.pressure; }
       
       const pos = getPos(e);
       this.inkCtx.lineTo(pos.x, pos.y);
@@ -282,7 +281,17 @@ export class TraceCanvas {
       if (this.isDrawing) {
         this.inkCtx.closePath();
         this.isDrawing = false;
-        this.inkCanvas.releasePointerCapture(e.pointerId);
+        
+        // 修正 P1：強制中斷防呆 (Ghost Stroke 防護)。
+        // 系統手勢 (如 iPad 多指上滑) 介入時，pointerId 會被 OS 回收，
+        // 缺乏 try/catch 會引發 DOMException，導致 isDrawing 卡死在 true。
+        try {
+          if (this.inkCanvas.hasPointerCapture(e.pointerId)) {
+            this.inkCanvas.releasePointerCapture(e.pointerId);
+          }
+        } catch {
+          // 指標已遭系統隱式釋放，靜默忽略即可
+        }
       }
     };
 
