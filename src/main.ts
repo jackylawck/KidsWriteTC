@@ -3,9 +3,7 @@ import './style.css';
 import { i18n, Locale } from './core/i18n';
 import { TraceCanvas } from './ui/canvas-trace';
 
-// 確保 DOM 載入完成後才執行
-document.addEventListener('DOMContentLoaded', () => {
-  
+function initApp() {
   // 1. 初始化描紅畫布
   const traceCanvas = new TraceCanvas('trace-canvas');
 
@@ -45,4 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5. 訂閱語系管理器並執行初次渲染
   i18n.subscribe(updateUIText);
   updateUIText();
-});
+}
+
+// 防禦性啟動：確保無論事件何時觸發都能正常掛載
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
