@@ -1,0 +1,18 @@
+cat << 'EOF' >> .gitignore
+
+# 依賴與產物
+node_modules/
+dist/
+dist.tmp/
+
+# Clean Room 原始資料與科研報告隔離 (嚴禁入版控)
+data/raw/
+reports/
+
+# JetBrains 配置
+.idea/
+*.iml
+
+# 本地暫存日誌
+*.log
+EOF
