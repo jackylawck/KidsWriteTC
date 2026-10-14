@@ -19,52 +19,78 @@ export interface Dictionary {
 }
 
 /**
- * 靜態詞彙庫 (Phase 0 MVP)
+ * 靜態詞彙庫 (支援純淨版面與多語系動態切換)
  */
 const DICTIONARY: Dictionary = {
   'zh-HK': {
     'app.title': '童寫繁體字 KidsWriteTC',
-    'app.description': '專為香港小學生設計的純淨筆順描紅工具',
-    'ui.button.start': '開始練習',
-    'ui.button.clear': '清除畫布',
-    'ui.button.next': '下一個字',
-    'ui.mode.classroom': '課堂投影模式 (Shift+F)',
-    'ui.status.ready': '準備就緒',
+    'app.description': '專為學童設計的繁體字筆順與描紅工具',
+    'ui.search.label': '直接輸入漢字',
+    'ui.search.button': '查詢',
+    'ui.button.prev': '上一劃',
+    'ui.button.next': '下一劃',
+    'ui.button.replay': '重新示範',
+    'ui.button.clear': '清除筆跡',
+    'ui.meta.radical': '部首',
+    'ui.meta.totalStrokes': '總筆畫數',
+    'ui.meta.pronounce': '字音',
+    'ui.meta.cantonese': '粵語',
+    'ui.meta.mandarin': '普通話',
+    'ui.unit.strokes': '畫',
+    'ui.unit.radical_suffix': '部',
+    'ui.alert.notFound': '「{char}」字庫分片準備中。'
   },
   'zh-CN': {
     'app.title': '童写繁体字 KidsWriteTC',
-    'app.description': '专为香港小学生设计的纯净笔顺描红工具',
-    'ui.button.start': '开始练习',
-    'ui.button.clear': '清除画布',
-    'ui.button.next': '下一个字',
-    'ui.mode.classroom': '课堂投影模式 (Shift+F)',
-    'ui.status.ready': '准备就绪',
+    'app.description': '专为学童设计的繁体字笔顺与描红工具',
+    'ui.search.label': '直接输入汉字',
+    'ui.search.button': '查询',
+    'ui.button.prev': '上一划',
+    'ui.button.next': '下一划',
+    'ui.button.replay': '重新示范',
+    'ui.button.clear': '清除笔迹',
+    'ui.meta.radical': '部首',
+    'ui.meta.totalStrokes': '总笔画数',
+    'ui.meta.pronounce': '字音',
+    'ui.meta.cantonese': '粤语',
+    'ui.meta.mandarin': '普通话',
+    'ui.unit.strokes': '画',
+    'ui.unit.radical_suffix': '部',
+    'ui.alert.notFound': '「{char}」字库分片准备中。'
   },
   'en': {
     'app.title': 'KidsWriteTC',
-    'app.description': 'Clean stroke tracing tool for HK primary students',
-    'ui.button.start': 'Start Practice',
-    'ui.button.clear': 'Clear Canvas',
-    'ui.button.next': 'Next Character',
-    'ui.mode.classroom': 'Classroom Mode (Shift+F)',
-    'ui.status.ready': 'Ready',
+    'app.description': 'Stroke Order & Tracing Tool for Kids',
+    'ui.search.label': 'Enter Character',
+    'ui.search.button': 'Search',
+    'ui.button.prev': 'Previous',
+    'ui.button.next': 'Next',
+    'ui.button.replay': 'Replay',
+    'ui.button.clear': 'Clear',
+    'ui.meta.radical': 'Radical',
+    'ui.meta.totalStrokes': 'Total Strokes',
+    'ui.meta.pronounce': 'Pronunciation',
+    'ui.meta.cantonese': 'Cantonese',
+    'ui.meta.mandarin': 'Mandarin',
+    'ui.unit.strokes': 'strokes',
+    'ui.unit.radical_suffix': '',
+    'ui.alert.notFound': 'Character "{char}" data not found.'
   }
 };
 
 /**
- * 記憶體雙語管理器 (零延遲、不依賴外部檔案)
+ * 記憶體雙語管理器 (零延遲、零外部依賴、隱私保護)
  */
 export class I18nManager {
   private currentLocale: Locale;
   private subscribers: Array<() => void> = [];
 
   constructor() {
-    // 初始化：優先讀取 sessionStorage，否則預設為 zh-HK
     this.currentLocale = this.getStoredLocale() || 'zh-HK';
   }
 
   /**
-   * 獲取當前儲存的語系
+   * 讀取 sessionStorage（關閉分頁即清除，符合零數據留存資安原則）
    */
   private getStoredLocale(): Locale | null {
     if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -76,17 +102,15 @@ export class I18nManager {
     return null;
   }
 
-  /**
-   * 獲取當前語系
-   */
   public getLocale(): Locale {
     return this.currentLocale;
   }
 
   /**
-   * 切換語系，並通知所有訂閱者更新畫面
+   * 切換語系並觸發畫面訂閱更新
    */
   public setLocale(locale: Locale): void {
+    if (this.currentLocale === locale) return;
     this.currentLocale = locale;
     if (typeof window !== 'undefined' && window.sessionStorage) {
       sessionStorage.setItem('kidswritetc_locale', locale);
@@ -95,31 +119,28 @@ export class I18nManager {
   }
 
   /**
-   * 翻譯指定 Key 的詞彙
+   * 翻譯字串，支援動態變數置換 (例如 t('ui.alert.notFound', { char: '港' }))
    */
-  public t(key: string): string {
-    const text = DICTIONARY[this.currentLocale][key];
-    return text || key; // 如果找不到翻譯，就回傳 Key 本身
+  public t(key: string, params?: Record<string, string | number>): string {
+    let text = DICTIONARY[this.currentLocale]?.[key] || DICTIONARY['zh-HK']?.[key] || key;
+    if (params) {
+      Object.entries(params).forEach(([paramKey, val]) => {
+        text = text.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(val));
+      });
+    }
+    return text;
   }
 
-  /**
-   * 註冊畫面更新回呼 (Callback)
-   */
   public subscribe(callback: () => void): () => void {
     this.subscribers.push(callback);
-    // 回傳取消訂閱的函數
     return () => {
       this.subscribers = this.subscribers.filter(cb => cb !== callback);
     };
   }
 
-  /**
-   * 通知所有訂閱者執行更新
-   */
   private notifySubscribers(): void {
     this.subscribers.forEach(callback => callback());
   }
 }
 
-// 匯出單例 (Singleton) 供整個 App 使用
 export const i18n = new I18nManager();
