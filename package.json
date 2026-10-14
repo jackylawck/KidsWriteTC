@@ -1,33 +1,18 @@
 {
   "name": "KidsWriteTC",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "專為香港小學生設計的純淨繁體字筆順描紅教學工具",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "test": "vitest",
     "build:data": "tsx scripts/build-data.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  },
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.11.2",
-      "onFail": "download"
-    }
-  },
   "packageManager": "pnpm@12.11.2",
-  "type": "module",
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "hanzi-writer-data": "^2.0.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
