@@ -37,7 +37,7 @@ function initApp() {
   let appManifest: ManifestData | null = null;
   let currentSearchController: AbortController | null = null; // 防競態條件
 
-  // UI 警示橫幅控制器 (取代 alert)
+  // UI 警示橫幅控制器
   const showWarning = (message: string, isError: boolean = false) => {
     if (!elWarning) return;
     elWarning.textContent = message;
@@ -96,16 +96,32 @@ function initApp() {
     window.speechSynthesis.speak(utterance);
   };
 
-  // 狀態與渲染解耦
-  const setCurrentCharData = (data: StrokeData) => {
+  // 修正 P1：恢復嚴格的 Nullable 型別，消除 as any 型別逃逸
+  const setCurrentCharData = (data: StrokeData | null) => {
     currentCharData = data;
     renderMetaCard();
   };
 
   const renderMetaCard = () => {
-    if (!currentCharData || !elTotalStrokes) return;
-    const strokesCount = currentCharData.totalStrokes || currentCharData.strokes.length;
-    elTotalStrokes.textContent = `${strokesCount} ${i18n.t('ui.unit.strokes')}`;
+    const elRadical = document.getElementById('meta-radical');
+    const elJyutping = document.getElementById('meta-jyutping');
+    const elHomophone = document.getElementById('meta-homophone');
+    const elPinyin = document.getElementById('meta-pinyin');
+
+    // 修正 P1：徹底清除所有欄位，防止 404 時舊字資料殘留 (State Leak)
+    if (!currentCharData) {
+      if (elTotalStrokes) elTotalStrokes.textContent = '—';
+      if (elRadical) elRadical.textContent = '—';
+      if (elJyutping) elJyutping.textContent = '—';
+      if (elHomophone) elHomophone.textContent = '—';
+      if (elPinyin) elPinyin.textContent = '—';
+      return;
+    }
+
+    if (elTotalStrokes) {
+      const strokesCount = currentCharData.totalStrokes || currentCharData.strokes.length;
+      elTotalStrokes.textContent = `${strokesCount} ${i18n.t('ui.unit.strokes')}`;
+    }
   };
 
   // 查詢漢字 (含競態條件防護與資料治理驗證)
@@ -161,7 +177,17 @@ function initApp() {
     } catch (err: unknown) {
       // 忽略因使用者連續輸入而被 Abort 的請求
       if (err instanceof Error && err.name === 'AbortError') return;
+      
       showWarning(i18n.t('ui.alert.notFound', { char }) || `找不到「${char}」的資料`, true);
+      
+      // 修正 P0：落實狀態清除，解決畫面殘留舊字跡的問題
+      traceCanvas.clearData();
+      setCurrentCharData(null); // 拔除 as any，落實型別安全
+      
+      if (btnPlayBubble) {
+        btnPlayBubble.textContent = '▶';
+        btnPlayBubble.setAttribute('aria-label', i18n.t('ui.button.play') || '播放');
+      }
     }
   };
 
