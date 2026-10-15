@@ -4,6 +4,9 @@ export interface StrokeData {
   char: string;
   unicode: string;
   totalStrokes?: number;
+  radical?: string;      // 新增：部首
+  jyutping?: string[];   // 新增：粵拼 (陣列，支援多音字)
+  pinyin?: string[];     // 新增：普拼 (陣列，支援多音字)
   strokes: string[]; 
   medians?: number[][][]; 
 }
