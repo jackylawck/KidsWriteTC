@@ -35,8 +35,8 @@ Whether using fingers or a stylus, I hope the smooth strokes gliding over the tr
 
 1. **三態資料治理框架 (Three-State Data Governance)**
    - 建立以 `manifest.json` 為單一事實來源（SSOT）的驗證體系：
-     - 🟢 **HK_VERIFIED（港標核定）**：通過專家評估與數位簽名（`reviewedBy` / `reviewedAt`）的手動補丁字元，點亮專屬綠色徽章。
-     - ⚪ **HK_LIKELY（常態呈現）**：未落入爭議清單的常用漢字（涵蓋 9,000+ 字），畫面靜默呈現，消除家長與學生的警告疲勞。
+     - 🟢 **HK_VERIFIED（港標核定）**：系統架構預留之最高治理層級。規範手動補丁必須具備經審查的實名教育專家與數位簽名（`reviewedBy` / `reviewedAt`），導入後將點亮綠色驗證徽章。（*目前正進行第一階段專家諮詢籌備，待回收後陸續啟用*）
+     - ⚪ **HK_LIKELY（常態呈現）**：未落入已知爭議清單的常用漢字（涵蓋 9,000+ 字），畫面靜默呈現，消除家長與學生的警告疲勞。
      - 🟡 **HK_DIVERGENT（分歧警示）**：落入已知爭議清單（`KNOWN_DIVERGENT`）之字元，主動顯示教學差異提示，誠實揭示潛在分歧。
 
 2. **雙層畫布分層架構 (Dual-Canvas Layering)**
@@ -97,9 +97,12 @@ pnpm run test
 
 ---
 
-### 學術驗證與 Delphi 專家機制
+### 學術研究與 Delphi 專家機制規劃 (Methodology & Roadmap)
 
-本專案採用 **德爾菲法（Delphi Method）** 進行字元基準驗證，針對首批 120 個代表性漢字進行前線香港小學中文科教師評核，持續擴充 `KNOWN_DIVERGENT` 清單與 `data/patches/` 手動覆蓋庫，確保教材等級的學術可辯護性。
+為確保字庫與手動補丁具備教材等級的學術可辯護性，本專案依循 **德爾菲專家諮詢法（Delphi Method）** 規劃分階段驗證：
+
+1. **基準字集確立**：已整理首階段 120 個核心基準字（涵蓋 L1 部件結構衝突、L2 筆順差異及本土教學高頻字）。
+2. **第一輪同儕評估（籌備中）**：規劃邀請前線香港小學中文科教師，針對爭議字形進行 4 點強制表態評審，評核共識將作為產出 `data/patches/` 手動覆蓋庫與動態調整 `KNOWN_DIVERGENT` 清單的實證依據。
 
 ---
 
@@ -117,9 +120,9 @@ Standard open-source stroke databases predominantly follow Mainland China (GB) o
 
 1. **Three-State Governance Model (SSOT Driven)**
 * Backed by `manifest.json` as the Single Source of Truth:
-* 🟢 **HK_VERIFIED**: Patched characters verified by linguistic experts with valid cryptographic signatures (`reviewedBy` / `reviewedAt`), unlocking the green verification badge.
+* 🟢 **HK_VERIFIED**: The highest governance tier defined in the architecture, reserved for manual patch entries that carry verified educator review metadata and audit timestamps (`reviewedBy` / `reviewedAt`). (*Phase 1 expert consultations currently in progress.*)
 * ⚪ **HK_LIKELY**: Characters not present in the divergence list (9,000+ entries) presented cleanly without UI noise or alert fatigue.
-* 🟡 **HK_DIVERGENT**: Characters with identified structural or sequence divergences from EDB standards, flagging transparent educational notices.
+* 🟡 **HK_DIVERGENT**: Characters identified with known cross-regional structural or sequence discrepancies, displaying transparent educational notices.
 
 
 
@@ -179,3 +182,4 @@ pnpm run test
 ### License
 
 This project is licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
+
