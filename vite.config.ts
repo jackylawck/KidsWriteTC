@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   // 必須對應你 GitHub Repository 嘅名稱，否則 GitHub Pages 會搵唔到資源
   base: '/KidsWriteTC/',
+  publicDir: 'public', // 👈 補上這行：強制明確複製 public 內的所有字庫分片
 
   build: {
     target: 'esnext',
