@@ -1,18 +1,21 @@
-cat << 'EOF' >> .gitignore
-
 # 依賴與產物
 node_modules/
 dist/
 dist.tmp/
+public/data/
+public/data.tmp/
 
-# Clean Room 原始資料與科研報告隔離 (嚴禁入版控)
+# Clean Room 原始資料、編譯中繼與科研報告隔離 (嚴禁入版控)
 data/raw/
+# data/compiled/  <-- 加上註解，解除封印讓字典上雲端！
 reports/
 
-# JetBrains 配置
+# IDE 配置
 .idea/
 *.iml
+.vscode/
 
-# 本地暫存日誌
+# 本地暫存日誌與環境變數
 *.log
-EOF
+.env
+.env.local

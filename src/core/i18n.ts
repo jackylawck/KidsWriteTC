@@ -19,7 +19,7 @@ const STORAGE_KEY = 'kidswritetc_locale';
 const DICTIONARY: Dictionary = {
   'zh-HK': {
     'app.title': '童寫繁體字 KidsWriteTC',
-    'ui.description': '專為學童設計的繁體字筆順與描紅工具',
+    'ui.description': '專為學童設計的繁體字筆順與寫字練習工具', // 👈 修正為香港慣用語
     'ui.search.label': '輸入單字',
     'ui.search.placeholder': '輸入單字',
     'ui.search.button': '查詢',

@@ -5,6 +5,8 @@ import path from 'node:path';
 const OUTPUT_DIR = path.resolve(process.cwd(), 'public/data');
 const TMP_DIR = path.resolve(process.cwd(), 'public/data.tmp');
 const HANZI_DATA_DIR = path.resolve(process.cwd(), 'node_modules/hanzi-writer-data');
+// 👇 Phase 1: 字典索引路徑
+const DICT_PATH = path.resolve(process.cwd(), 'data', 'compiled', 'dictionary.json');
 
 interface ManifestEntry {
   char: string;
@@ -21,6 +23,16 @@ async function buildAll() {
   await fs.promises.rm(TMP_DIR, { recursive: true, force: true });
   await fs.promises.mkdir(TMP_DIR, { recursive: true });
   
+  // 👇 載入 Phase 1 字典資料
+  let dictionary: Record<string, { radical: string; jyutping: string[]; pinyin: string[] }> = {};
+  if (fs.existsSync(DICT_PATH)) {
+    const rawDict = await fs.promises.readFile(DICT_PATH, 'utf-8');
+    dictionary = JSON.parse(rawDict);
+    console.log(`✅ 已載入擴充字典索引，共涵蓋 ${Object.keys(dictionary).length} 字`);
+  } else {
+    console.warn('⚠️ 找不到 data/compiled/dictionary.json，字音與部首將留空。');
+  }
+
   const files = (await fs.promises.readdir(HANZI_DATA_DIR))
     .filter(f => f.endsWith('.json') && !f.startsWith('package'));
   
@@ -46,7 +58,6 @@ async function buildAll() {
       const strokes: string[] = rawData.strokes || [];
       const medians: number[][][] = rawData.medians || [];
       
-      // 結構與幾何完整性驗證
       if (strokes.length === 0) {
         errors.push({ file, reason: 'no strokes data' });
         continue;
@@ -60,10 +71,24 @@ async function buildAll() {
         continue;
       }
 
-      // 寫入包含 medians 的完整幾何分片
+      // 👇 讀取該字的字典 Metadata
+      const dictMeta = dictionary[unicode] || { radical: '—', jyutping: [], pinyin: [] };
+
+      // 👇 寫入包含 Metadata 與幾何資料的完整分片
+      const outputData = { 
+        char, 
+        unicode, 
+        totalStrokes: strokes.length,
+        radical: dictMeta.radical,
+        jyutping: dictMeta.jyutping,
+        pinyin: dictMeta.pinyin,
+        strokes, 
+        medians 
+      };
+
       await fs.promises.writeFile(
         path.join(TMP_DIR, `${unicode}.json`),
-        JSON.stringify({ char, unicode, strokes, medians })
+        JSON.stringify(outputData)
       );
       
       manifest[unicode] = {
@@ -79,18 +104,18 @@ async function buildAll() {
         process.stdout.write(`  進度：${processed} / ${files.length}\n`);
       }
     } catch (err: unknown) {
-      // 穩健的錯誤型別處理
       const reason = err instanceof Error ? err.message : String(err);
       errors.push({ file, reason });
     }
   }
 
+  // 修正 P2: 拔除 generatedAt 動態時間戳，避免每次重新 build 都產生無意義的 Git 異動
   await fs.promises.writeFile(
     path.join(TMP_DIR, 'manifest.json'),
     JSON.stringify({
       source: 'hanzi-writer-data',
       standard: 'UNVERIFIED',
-      generatedAt: new Date().toISOString(),
+      verifiedAtCommit: process.env.GITHUB_SHA || 'local',
       entries: manifest,
     })
   );
