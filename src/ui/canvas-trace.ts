@@ -125,7 +125,12 @@ export class TraceCanvas {
     this.currentData = null;
     this._currentStrokeIndex = 1;
     this.clearInk();
-    this.renderTrace();
+    
+    if (this.strokeBadge) {
+      this.strokeBadge.textContent = '- / -';
+    }
+    
+    this.renderTrace(); // 確保重新繪製乾淨的米字格背景
   }
 
   private drawGrid() {
@@ -152,14 +157,10 @@ export class TraceCanvas {
     this.traceCtx.clearRect(0, 0, this.traceCanvas.width, this.traceCanvas.height);
     this.traceCtx.restore();
 
-    // 統一在此處理 strokeBadge，徹底消除狀態洩漏
-    if (this.strokeBadge) {
-      if (this.currentData) {
-        const total = this.currentData.totalStrokes || this.currentData.strokes.length;
-        this.strokeBadge.textContent = `${this._currentStrokeIndex} / ${total}`;
-      } else {
-        this.strokeBadge.textContent = '- / -';
-      }
+    // 更新進度徽章
+    if (this.strokeBadge && this.currentData) {
+      const total = this.currentData.totalStrokes || this.currentData.strokes.length;
+      this.strokeBadge.textContent = `${this._currentStrokeIndex} / ${total}`;
     }
 
     const scaleFactor = this.canvasWidth / 1024;
@@ -169,9 +170,10 @@ export class TraceCanvas {
     this.traceCtx.translate(0, 1024);
     this.traceCtx.scale(1, -1);
 
+    // 任何狀態下都必須繪製米字格底圖
     this.drawGrid();
 
-    // 無資料則提早返回 (米字格與 Badge 已正確設定)
+    // 無字元資料則直接返回，只留下乾淨的米字格
     if (!this.currentData) {
       this.traceCtx.restore();
       return;
