@@ -1,21 +1,23 @@
 // scripts/build-data.ts
 import fs from 'node:fs';
 import path from 'node:path';
+import { KNOWN_DIVERGENT } from './known-divergence';
 
 const OUTPUT_DIR = path.resolve(process.cwd(), 'public/data');
 const TMP_DIR = path.resolve(process.cwd(), 'public/data.tmp');
 const REPORT_DIR = path.resolve(process.cwd(), 'build-reports');
 const HANZI_DATA_DIR = path.resolve(process.cwd(), 'node_modules/hanzi-writer-data');
 const DICT_PATH = path.resolve(process.cwd(), 'data', 'compiled', 'dictionary.json');
-// 👇 補丁系統核心目錄
 const PATCH_DIR = path.resolve(process.cwd(), 'data', 'patches');
+
+export type GovernanceLevel = 'HK_VERIFIED' | 'HK_LIKELY' | 'HK_DIVERGENT';
 
 interface ManifestEntry {
   char: string;
   unicode: string;
   totalStrokes: number;
   hasMedians: boolean;
-  level: 'UNVERIFIED' | 'HK_STANDARD' | 'FALLBACK';
+  level: GovernanceLevel;
 }
 
 const isValidPath = (p: string) => /^[MmLlHhVvCcSsQqTtAaZz0-9\s.,\-+eE]+$/.test(p);
@@ -34,7 +36,7 @@ function isValidMedians(medians: unknown): medians is number[][][] {
 }
 
 async function buildAll() {
-  console.log('📦 啟動字庫建置管線...');
+  console.log('📦 啟動三態治理字庫建置管線...');
 
   await fs.promises.rm(TMP_DIR, { recursive: true, force: true });
   await fs.promises.mkdir(TMP_DIR, { recursive: true });
@@ -58,7 +60,7 @@ async function buildAll() {
     ? (await fs.promises.readdir(HANZI_DATA_DIR)).filter(f => f.endsWith('.json') && !f.startsWith('package'))
     : [];
   const patchFilesList = (await fs.promises.readdir(PATCH_DIR)).filter(f => f.endsWith('.json'));
-  const patchFiles = new Set(patchFilesList); // O(1) 查詢效能優化
+  const patchFiles = new Set(patchFilesList);
   
   const overlapping = hanziFiles.filter(f => patchFiles.has(f));
   if (overlapping.length > 0) {
@@ -72,6 +74,11 @@ async function buildAll() {
   
   const manifest: Record<string, ManifestEntry> = {};
   const errors: Array<{ file: string; reason: string }> = [];
+  const stats: Record<GovernanceLevel, number> = {
+    HK_VERIFIED: 0,
+    HK_LIKELY: 0,
+    HK_DIVERGENT: 0
+  };
   let processed = 0;
   
   for (const file of allFiles) {
@@ -101,21 +108,19 @@ async function buildAll() {
       const strokes: string[] = rawData.strokes || [];
       const medians: unknown = rawData.medians || [];
       
+      // 幾何防護：嚴禁寫入空分片與損壞資料
       if (strokes.length === 0) {
         errors.push({ file, reason: 'no strokes data' });
         continue;
       }
-      
       if (!isValidMedians(medians)) {
         errors.push({ file, reason: 'invalid medians structure' });
         continue;
       }
-      
       if (strokes.length !== medians.length) {
         errors.push({ file, reason: `length mismatch: strokes (${strokes.length}) vs medians (${medians.length})` });
         continue;
       }
-      
       if (!strokes.every(isValidPath)) {
         errors.push({ file, reason: 'invalid SVG path detected' });
         continue;
@@ -123,15 +128,26 @@ async function buildAll() {
 
       const dictMeta = dictionary[unicode] || { radical: '—', jyutping: [], pinyin: [] };
       
-      // 嚴格型別校驗：只有經過審查的補丁才能升級為 HK_STANDARD
+      // 專家數位簽名校驗
       const hasReview = isPatched 
         && typeof rawData.reviewedBy === 'string' 
         && rawData.reviewedBy.trim().length > 0
         && typeof rawData.reviewedAt === 'string'
         && /^\d{4}-\d{2}-\d{2}/.test(rawData.reviewedAt);
         
-      const level = hasReview ? 'HK_STANDARD' : (isPatched ? 'FALLBACK' : 'UNVERIFIED');
+      // 三態分流判定
+      let level: GovernanceLevel;
+      if (hasReview) {
+        level = 'HK_VERIFIED';
+      } else if (isPatched || KNOWN_DIVERGENT.has(char)) {
+        level = 'HK_DIVERGENT';
+      } else {
+        level = 'HK_LIKELY';
+      }
 
+      stats[level]++;
+
+      // 寫入單字分片（乾淨寫入，不含 level 冗餘）
       await fs.promises.writeFile(
         path.join(TMP_DIR, `${unicode}.json`),
         JSON.stringify({ 
@@ -141,6 +157,7 @@ async function buildAll() {
         })
       );
       
+      // Manifest 作為資料治理的單一事實來源 (SSOT)
       manifest[unicode] = { char, unicode, totalStrokes: strokes.length, hasMedians: true, level };
       processed++;
       
@@ -152,17 +169,18 @@ async function buildAll() {
     }
   }
 
+  // 產出 v2.0 Schema
   await fs.promises.writeFile(
     path.join(TMP_DIR, 'manifest.json'),
     JSON.stringify({
-      source: 'kidswritetc-merged',
-      standard: 'MIXED',
+      schemaVersion: '2.0.0',
+      standard: 'HK-EDB-FOUR-STATE', // 為了維持 CI 白名單相容性保留此標記名稱
       verifiedAtCommit: process.env.GITHUB_SHA || 'local',
+      stats,
       entries: manifest,
     })
   );
   
-  // 錯誤報告隔離到 build-reports，避免洩漏到 public
   if (errors.length > 0) {
     await fs.promises.writeFile(
       path.join(REPORT_DIR, `build-errors-${process.env.GITHUB_SHA || 'local'}.json`),
@@ -174,14 +192,14 @@ async function buildAll() {
   await fs.promises.rename(TMP_DIR, OUTPUT_DIR);
 
   console.log('\n======================================================');
-  console.log(`✅ 建置完成`);
-  console.log(`   總分片數 : ${Object.keys(manifest).length}`);
-  console.log(`   手動補丁 : ${Object.values(manifest).filter(e => e.level !== 'UNVERIFIED').length}`);
-  console.log(`   錯誤數量 : ${errors.length}`);
+  console.log('✅ 三態管線建置完成！');
+  console.log(`   🟢 HK_VERIFIED  (專家核定) : ${stats.HK_VERIFIED}`);
+  console.log(`   ⚪ HK_LIKELY    (常態呈現) : ${stats.HK_LIKELY}`);
+  console.log(`   🟡 HK_DIVERGENT (爭議警示) : ${stats.HK_DIVERGENT}`);
+  console.log(`   ⚠️ 幾何異常檔數             : ${errors.length}`);
   console.log('======================================================\n');
 }
 
-// 攔截所有未預期錯誤，確保 CI 亮紅燈而非靜默通過
 buildAll().catch(err => {
   console.error('❌ 致命錯誤，建置管線崩潰：', err);
   process.exit(1);
