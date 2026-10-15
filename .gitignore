@@ -7,7 +7,7 @@ public/data.tmp/
 
 # Clean Room 原始資料、編譯中繼與科研報告隔離 (嚴禁入版控)
 data/raw/
-data/compiled/
+# data/compiled/  <-- 加上註解，解除封印讓字典上雲端！
 reports/
 
 # IDE 配置
