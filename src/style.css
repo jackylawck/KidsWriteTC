@@ -1,309 +1,402 @@
 /* src/style.css */
-
-/* P3 修正：加入 color-scheme 防止深色模式下控制項反白 */
 :root {
-  color-scheme: light;
+  --primary-color: #b71c1c; /* 深紅色 (香港教育局標準色系) */
+  --primary-light: #f05545;
+  --primary-dark: #7f0000;
+  
+  --secondary-color: #00796b; /* 深藍綠 (輔助色) */
+  --secondary-light: #48a999;
+  --secondary-dark: #004c40;
+  
+  --bg-color: #fdfaf2; /* 護眼米白色 */
+  --surface-color: #ffffff;
+  
+  --text-main: #333333;
+  --text-muted: #757575;
+  
+  --border-color: #e0e0e0;
+  --grid-color: #ffcdd2; 
+  
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.08);
+  
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  
+  color-scheme: light; /* 防止深色模式下控制項反白 */
 }
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang HK", "Microsoft JhengHei", sans-serif;
-  margin: 0;
-  padding: 20px;
-  background-color: #fdfaf2;
-  color: #333;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "PingFang HK", "MingLiU", sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
+#app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* === 頂部標題區 === */
 header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
+h1 {
+  font-size: 2rem;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+/* === 語言選擇器 === */
 .lang-selector {
   display: flex;
   justify-content: center;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 16px;
+}
+
+.lang-selector button {
+  padding: 6px 16px;
+  border: 1px solid var(--secondary-color);
+  background: transparent;
+  color: var(--secondary-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
 
 .lang-selector button[aria-checked="true"] {
-  background-color: #e0f2f1;
-  border-color: #00897b;
+  background: #e0f2f1;
   color: #00695c;
+  border-color: #00897b;
   font-weight: bold;
 }
 
-.search-section {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 24px;
+.lang-selector button:hover:not([aria-checked="true"]) {
+  background: rgba(0, 121, 107, 0.05);
 }
 
-/* P1 修正：搜尋列彈性寬度適應中英文 */
+/* === 搜尋區塊 === */
 .search-bar {
   display: flex;
-  align-items: center;
-  background-color: #8b0000;
-  border-radius: 6px;
-  padding: 4px 6px;
-  gap: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  width: 100%;
-  max-width: 320px;
+  max-width: 500px;
+  margin: 0 auto 32px auto;
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
-.search-bar input {
-  min-width: 140px;
-  width: 100%;
-  max-width: 200px;
-  height: 32px;
-  font-size: 16px;
-  font-weight: bold;
-  text-align: center;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+#input-char {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 1.25rem;
+  border: 2px solid var(--primary-color);
+  border-right: none;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
   outline: none;
+  text-align: center;
 }
 
-.btn-primary {
-  background-color: #fff;
-  color: #8b0000;
-  border: none;
+#input-char:focus {
+  background-color: rgba(183, 28, 28, 0.02);
+}
+
+#btn-search {
+  padding: 0 24px;
+  font-size: 1.1rem;
   font-weight: bold;
-  height: 32px;
-  border-radius: 4px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
+#btn-search:hover {
+  background-color: var(--primary-dark);
+}
+
+/* === 主要顯示區 (CSS Grid 響應式排版) === */
 .main-display-grid {
-  display: flex;
-  flex-direction: row;
-  gap: 28px;
-  align-items: flex-start;
-  background-color: #fff;
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) 280px;
+  gap: 24px;
+  background: var(--surface-color);
   padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  align-items: start;
 }
 
+@media (max-width: 650px) {
+  .main-display-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === 左側：畫布與控制器 === */
 .canvas-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 300px;
 }
 
-/* P0 修正：使用 display: none 避免佔據佈局空間，配合 keyframes 實現流暢淡入 */
+/* 警示橫幅 */
 .warning-banner {
-  display: none;
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeeba;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: 12px;
   width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  background-color: #fff3e0;
+  border-left: 4px solid #ff9800;
+  color: #e65100;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  text-align: center;
+  display: none;
 }
 
 .warning-banner.visible {
   display: block;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .warning-banner.warning-error {
-  background-color: #f8d7da;
-  color: #721c24;
-  border-color: #f5c6cb;
+  background-color: #ffebee;
+  border-left-color: #f44336;
+  color: #c62828;
 }
 
-/* P2 修正：自適應長寬比，防止小螢幕溢出 */
+/* 畫布容器 (維持 1:1 比例) */
 .canvas-container {
-  width: 100%;
-  max-width: 300px;
-  aspect-ratio: 1 / 1;
-  height: auto;
-  border: 2px solid #b71c1c;
-  background-color: #fff;
   position: relative;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1 / 1;
+  background-color: white;
+  border: 2px solid var(--primary-color);
+  border-radius: 4px;
   overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.03);
 }
 
-/* P0 修正：使用 inset: 0 自動填滿 Content Box */
-.canvas-layer {
+/* 雙層畫布疊加與縮放 */
+#trace-canvas,
+#ink-canvas {
   position: absolute;
   inset: 0;
+  width: 100% !important; 
+  height: 100% !important;
 }
 
-.trace-layer {
+#trace-canvas {
   z-index: 1;
   pointer-events: none;
 }
 
-.ink-layer {
+#ink-canvas {
   z-index: 2;
+  cursor: crosshair;
   touch-action: none;
 }
 
-/* P3 修正：縮小徽章尺寸，減少字形干擾 */
+/* 筆劃進度標籤 */
 .stroke-badge {
   position: absolute;
   top: 8px;
   left: 12px;
-  font-size: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 1.25rem;
   font-weight: bold;
-  color: #666;
-  z-index: 10;
-  pointer-events: none;
-  font-family: Arial, sans-serif;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+  color: var(--text-muted);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  z-index: 3;
 }
 
-/* P2 修正：顏色對齊主題棗紅 */
+/* 播放按鈕 */
 .play-bubble {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
-  width: 36px;
-  height: 36px;
+  bottom: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background-color: #8b0000;
-  color: #fff;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-  font-size: 14px;
+  background-color: var(--primary-dark);
+  color: white;
+  border: 2px solid white;
+  font-size: 1.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10;
+  box-shadow: var(--shadow-md);
+  z-index: 3;
+  transition: transform 0.1s, background-color 0.2s;
 }
 
-.playback-controls {
+.play-bubble:hover {
+  background-color: var(--primary-color);
+  transform: scale(1.05);
+}
+
+.play-bubble:active {
+  transform: scale(0.95);
+}
+
+/* 控制按鈕列 */
+.controls-row {
   display: flex;
+  gap: 8px;
+  margin-top: 16px;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  margin-top: 14px;
 }
 
-/* P2 修正：Meta 資訊卡自適應寬度 */
-.meta-card {
-  width: 100%;
-  max-width: 280px;
+.btn-control {
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  transition: all 0.2s;
+}
+
+.btn-control:hover {
+  background: #f5f5f5;
+  border-color: #bdbdbd;
+}
+
+.btn-control.danger {
+  color: var(--primary-color);
+  border-color: #ffcdd2;
+}
+.btn-control.danger:hover {
+  background: #ffebee;
+}
+
+/* === 右側：屬性資料卡 === */
+.meta-panel {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.meta-table {
-  border: 1px solid #00695c;
-  border-radius: 4px;
+.meta-card {
+  border: 1px solid var(--secondary-light);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
-.meta-row {
+.meta-header {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 8px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.meta-grid-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
   text-align: center;
 }
 
-.header-row {
-  background-color: #00897b;
-  color: #fff;
-  font-weight: bold;
-  padding: 6px 0;
-  font-size: 14px;
-}
-
-.content-row {
+.meta-col {
+  padding: 12px 8px;
   background-color: #e0f2f1;
-  padding: 8px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #004d40;
+}
+.meta-col:first-child {
+  border-right: 1px solid rgba(0, 121, 107, 0.1);
 }
 
-.pronounce-table {
-  border: 1px solid #0277bd;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.pronounce-header {
-  background-color: #0288d1;
-  color: #fff;
-  text-align: center;
+.meta-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--secondary-dark);
+  margin-bottom: 4px;
   font-weight: bold;
-  padding: 6px 0;
-  font-size: 14px;
+}
+
+.meta-val {
+  font-size: 1.2rem;
+  color: var(--text-main);
+}
+
+/* 發音區塊 */
+.pronounce-card .meta-header {
+  background-color: #0288d1;
+}
+.pronounce-card {
+  border-color: #81d4fa;
 }
 
 .pronounce-row {
   display: flex;
   align-items: center;
-  padding: 10px 14px;
+  padding: 12px 16px;
   background-color: #e1f5fe;
-  border-top: 1px solid #b3e5fc;
-  gap: 10px;
+  border-bottom: 1px solid rgba(2, 136, 209, 0.1);
+}
+.pronounce-row:last-child {
+  border-bottom: none;
 }
 
-.pronounce-label {
+.lang-label {
+  width: 60px;
+  font-size: 0.9rem;
   font-weight: bold;
   color: #01579b;
-  font-size: 14px;
-  width: 50px;
 }
 
 .pronounce-val {
+  flex: 1;
   font-family: monospace;
-  font-size: 16px;
-  font-weight: bold;
-  color: #111;
+  font-size: 1.1rem;
+  color: var(--text-main);
 }
 
 .pronounce-note {
-  color: #555;
-  font-size: 13px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-left: 8px;
 }
 
 .btn-audio {
-  margin-left: auto;
   background: none;
   border: none;
-  font-size: 18px;
   cursor: pointer;
-  padding: 0;
+  font-size: 1.2rem;
+  color: #0288d1;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background 0.2s;
 }
 
-button {
-  padding: 6px 12px;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
+.btn-audio:hover {
+  background: rgba(2, 136, 209, 0.1);
 }
 
-button:hover {
-  background-color: #f5f5f5;
-}
-
-/* P1 修正：明確且合規的 focus-visible 焦點環 */
+/* 無障礙設定 */
 button:focus-visible, 
 .search-bar input:focus-visible {
   outline: 2px solid #0288d1;
@@ -311,52 +404,11 @@ button:focus-visible,
   border-radius: 4px;
 }
 
-button:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.btn-danger {
-  color: #c62828;
-  border-color: #ef9a9a;
-}
-
-.btn-danger:hover {
-  background-color: #ffebee;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
-
-/* P1 修正：無障礙動效保護 (尊重減少動畫偏好) */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-}
-
-/* RWD 斷點設定 */
-@media (max-width: 720px) {
-  .main-display-grid {
-    flex-direction: column;
-    align-items: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .search-bar input {
-    min-width: 100px;
   }
 }
