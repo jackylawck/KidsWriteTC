@@ -19,7 +19,7 @@ const STORAGE_KEY = 'kidswritetc_locale';
 const DICTIONARY: Dictionary = {
   'zh-HK': {
     'app.title': '童寫繁體字 KidsWriteTC',
-    'ui.description': '專為學童設計的繁體字筆順與寫字練習工具', // 👈 修正為香港慣用語
+    'ui.description': '專為學童設計的繁體字筆順與寫字練習工具',
     'ui.search.label': '輸入單字',
     'ui.search.placeholder': '輸入單字',
     'ui.search.button': '查詢',
@@ -40,7 +40,11 @@ const DICTIONARY: Dictionary = {
     'ui.alert.unverified': '⚠️ 此字庫尚未完成港標驗證，筆順僅供參考',
     'ui.alert.ttsUnavailable': '您的設備未安裝粵語語音包',
     'ui.alert.dataUnavailable': '字庫索引載入失敗，請重整頁面',
-    'ui.languageSelector': '語言選擇'
+    'ui.languageSelector': '語言選擇',
+    // 👇 補上四態治理專屬文本
+    'ui.alert.divergent': '⚠️ 此字在香港教學標準中筆順或部件可能存在分歧，僅供參考',
+    'ui.alert.unknown': 'ⓘ 此字形幾何資料不完整，正在整理中',
+    'ui.badge.verified': '✓ 港標核定'
   },
   'en': {
     'app.title': 'KidsWriteTC',
@@ -65,7 +69,11 @@ const DICTIONARY: Dictionary = {
     'ui.alert.unverified': '⚠️ Unverified stroke standard. For reference only.',
     'ui.alert.ttsUnavailable': 'Cantonese voice pack is not installed on your device.',
     'ui.alert.dataUnavailable': 'Data index failed to load. Please refresh the page.',
-    'ui.languageSelector': 'Language Selection'
+    'ui.languageSelector': 'Language Selection',
+    // 👇 補上四態治理專屬文本
+    'ui.alert.divergent': '⚠️ This character may diverge from HK EDB guidelines. For reference only.',
+    'ui.alert.unknown': 'ⓘ Incomplete stroke geometry data for this character.',
+    'ui.badge.verified': '✓ HK Standard Verified'
   }
 };
 
