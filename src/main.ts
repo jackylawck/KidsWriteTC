@@ -2,248 +2,276 @@
 import { TraceCanvas, StrokeData } from './ui/canvas-trace';
 import { i18n, Locale } from './core/i18n';
 
-// 擴充 StrokeData 以包含資料治理標記
-interface CharacterData extends StrokeData {
-  level: 'UNVERIFIED' | 'HK_STANDARD' | 'FALLBACK';
+export type GovernanceLevel = 'HK_VERIFIED' | 'HK_LIKELY' | 'HK_DIVERGENT';
+
+interface ManifestEntry {
+  char: string;
+  unicode: string;
+  totalStrokes: number;
+  hasMedians: boolean;
+  level: GovernanceLevel;
 }
 
-class KidsWriteApp {
-  private canvas: TraceCanvas;
-  private currentData: CharacterData | null = null;
-  private synth = window.speechSynthesis;
+interface AppManifest {
+  schemaVersion: string;
+  standard: string;
+  stats: Record<GovernanceLevel, number>;
+  entries: Record<string, ManifestEntry>;
+}
 
-  // DOM 節點緩存
-  private els = {
-    inputChar: document.getElementById('input-char') as HTMLInputElement,
-    btnSearch: document.getElementById('btn-search') as HTMLButtonElement,
-    
-    // Playback Controls
-    btnPrev: document.getElementById('btn-prev-stroke') as HTMLButtonElement,
-    btnNext: document.getElementById('btn-next-stroke') as HTMLButtonElement,
-    btnReplay: document.getElementById('btn-replay') as HTMLButtonElement,
-    btnClear: document.getElementById('btn-clear') as HTMLButtonElement,
-    btnPlayBubble: document.getElementById('btn-play-bubble') as HTMLButtonElement,
-    
-    // Meta Info
-    metaRadical: document.getElementById('meta-radical') as HTMLElement,
-    metaTotalStrokes: document.getElementById('meta-total-strokes') as HTMLElement,
-    metaJyutping: document.getElementById('meta-jyutping') as HTMLElement,
-    metaPinyin: document.getElementById('meta-pinyin') as HTMLElement,
-    
-    // Audio
-    btnAudioCantonese: document.getElementById('btn-audio-cantonese') as HTMLButtonElement,
-    btnAudioMandarin: document.getElementById('btn-audio-mandarin') as HTMLButtonElement,
-    
-    // Status
-    warningBanner: document.getElementById('standard-warning') as HTMLElement,
-    langSelectors: document.querySelectorAll('.lang-selector button')
+function initApp() {
+  // 1. 狀態變數 (純閉包管理，無 this 包袱)
+  let appManifest: AppManifest | null = null;
+  let currentCharData: StrokeData | null = null;
+  let currentSearchController: AbortController | null = null;
+  const synth = window.speechSynthesis;
+
+  // 2. 初始化核心畫布引擎
+  const traceCanvas = new TraceCanvas('trace-canvas', 'ink-canvas', 'stroke-badge');
+
+  // 3. DOM 節點擷取
+  const elInput = document.getElementById('input-char') as HTMLInputElement;
+  const elBtnSearch = document.getElementById('btn-search') as HTMLButtonElement;
+  const elWarning = document.getElementById('standard-warning') as HTMLElement | null;
+  const elBadgeVerified = document.getElementById('badge-verified') as HTMLElement | null;
+  
+  const btnPrev = document.getElementById('btn-prev-stroke') as HTMLButtonElement;
+  const btnNext = document.getElementById('btn-next-stroke') as HTMLButtonElement;
+  const btnReplay = document.getElementById('btn-replay') as HTMLButtonElement;
+  const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
+  const btnPlayBubble = document.getElementById('btn-play-bubble') as HTMLButtonElement;
+  
+  const metaRadical = document.getElementById('meta-radical') as HTMLElement;
+  const metaTotalStrokes = document.getElementById('meta-total-strokes') as HTMLElement;
+  const metaJyutping = document.getElementById('meta-jyutping') as HTMLElement;
+  const metaPinyin = document.getElementById('meta-pinyin') as HTMLElement;
+  
+  const btnAudioCantonese = document.getElementById('btn-audio-cantonese') as HTMLButtonElement;
+  const btnAudioMandarin = document.getElementById('btn-audio-mandarin') as HTMLButtonElement;
+  const langSelectors = document.querySelectorAll('.lang-selector button');
+
+  // 4. UI 調度輔助函式
+  const showWarning = (text: string, isError = false) => {
+    if (!elWarning) return;
+    elWarning.style.display = 'block';
+    elWarning.classList.add('visible');
+    if (isError) {
+      elWarning.classList.add('warning-error');
+    } else {
+      elWarning.classList.remove('warning-error');
+    }
+    elWarning.textContent = text;
   };
 
-  constructor() {
-    this.canvas = new TraceCanvas('trace-canvas', 'ink-canvas', 'stroke-badge');
-    
-    this.bindEvents();
-    this.setupI18n();
-    
-    // 🚀 仔仔專屬彩蛋：系統初始化時，預設載入「上」字
-    this.loadCharacter('上');
-  }
+  const hideWarning = () => {
+    if (!elWarning) return;
+    elWarning.style.display = 'none';
+    elWarning.classList.remove('visible', 'warning-error');
+  };
 
-  private bindEvents() {
-    // 搜尋功能 (按鈕與 Enter 鍵)
-    this.els.btnSearch.addEventListener('click', () => this.handleSearch());
-    this.els.inputChar.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.handleSearch();
-    });
+  const setVerifiedBadge = (visible: boolean) => {
+    if (!elBadgeVerified) return;
+    elBadgeVerified.classList.toggle('visible', visible);
+    if (visible) {
+      elBadgeVerified.setAttribute('aria-label', i18n.t('ui.badge.verified'));
+      elBadgeVerified.setAttribute('title', i18n.t('ui.badge.verified'));
+    }
+  };
 
-    // 畫布控制
-    this.els.btnPrev.addEventListener('click', () => this.canvas.prevStroke());
-    this.els.btnNext.addEventListener('click', () => this.canvas.nextStroke());
-    this.els.btnClear.addEventListener('click', () => this.canvas.clearInk());
-    
-    this.els.btnReplay.addEventListener('click', () => {
-      this.canvas.clearInk();
-      this.canvas.startAutoPlay(() => this.updatePlayBubbleState(false));
-      this.updatePlayBubbleState(true);
-    });
+  const updatePlayBubbleState = (isPlaying: boolean) => {
+    if (!btnPlayBubble) return;
+    btnPlayBubble.textContent = isPlaying ? '⏸' : '▶';
+    btnPlayBubble.setAttribute('aria-label', isPlaying ? i18n.t('ui.button.pause') : i18n.t('ui.button.play'));
+  };
 
-    this.els.btnPlayBubble.addEventListener('click', () => {
-      const isPlaying = this.canvas.toggleAutoPlay(() => this.updatePlayBubbleState(false));
-      this.updatePlayBubbleState(isPlaying);
-    });
-
-    // 語音播放 (TTS)
-    this.els.btnAudioCantonese.addEventListener('click', () => this.speak(this.currentData?.char, 'zh-HK'));
-    this.els.btnAudioMandarin.addEventListener('click', () => this.speak(this.currentData?.char, 'zh-CN'));
-
-    // 語言切換
-    this.els.langSelectors.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const target = e.target as HTMLButtonElement;
-        const lang = target.dataset.lang as Locale;
-        if (lang) {
-          i18n.setLocale(lang);
-          this.updateLangSelectorUI(lang);
-        }
-      });
-    });
-  }
-
-  private setupI18n() {
-    // 初始化 UI 狀態
-    this.updateLangSelectorUI(i18n.getLocale());
-    this.updateTexts();
-
-    // 訂閱語系變更
-    i18n.subscribe(() => {
-      this.updateTexts();
-      this.updateMetaDataUI(); // 重新渲染部首/筆畫數單位
-    });
-  }
-
-  private updateLangSelectorUI(currentLang: Locale) {
-    this.els.langSelectors.forEach(btn => {
-      const isSelected = btn.dataset.lang === currentLang;
-      btn.setAttribute('aria-checked', isSelected.toString());
-      if (isSelected) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
-    });
-  }
-
-  private updateTexts() {
-    // Header
+  const updateTexts = () => {
     document.getElementById('ui-title')!.textContent = i18n.t('app.title');
     document.getElementById('ui-desc')!.textContent = i18n.t('ui.description');
+    elInput.placeholder = i18n.t('ui.search.placeholder');
+    elBtnSearch.textContent = i18n.t('ui.search.button');
+    btnPrev.textContent = i18n.t('ui.button.prev');
+    btnNext.textContent = i18n.t('ui.button.next');
+    btnReplay.textContent = i18n.t('ui.button.replay');
+    btnClear.textContent = i18n.t('ui.button.clear');
     
-    // Search
-    this.els.inputChar.placeholder = i18n.t('ui.search.placeholder');
-    this.els.btnSearch.textContent = i18n.t('ui.search.button');
+    const labelRadical = document.querySelector('.label-radical');
+    if (labelRadical) labelRadical.textContent = i18n.t('ui.meta.radical');
     
-    // Controls
-    this.els.btnPrev.textContent = i18n.t('ui.button.prev');
-    this.els.btnNext.textContent = i18n.t('ui.button.next');
-    this.els.btnReplay.textContent = i18n.t('ui.button.replay');
-    this.els.btnClear.textContent = i18n.t('ui.button.clear');
+    const labelTotalStrokes = document.querySelector('.label-total-strokes');
+    if (labelTotalStrokes) labelTotalStrokes.textContent = i18n.t('ui.meta.totalStrokes');
+    
+    const labelPronounce = document.querySelector('.label-pronounce');
+    if (labelPronounce) labelPronounce.textContent = i18n.t('ui.meta.pronounce');
+    
+    const labelCantonese = document.querySelector('.label-cantonese');
+    if (labelCantonese) labelCantonese.textContent = i18n.t('ui.meta.cantonese');
+    
+    const labelMandarin = document.querySelector('.label-mandarin');
+    if (labelMandarin) labelMandarin.textContent = i18n.t('ui.meta.mandarin');
 
-    // Labels
-    document.querySelector('.label-radical')!.textContent = i18n.t('ui.meta.radical');
-    document.querySelector('.label-total-strokes')!.textContent = i18n.t('ui.meta.totalStrokes');
-    document.querySelector('.label-pronounce')!.textContent = i18n.t('ui.meta.pronounce');
-    document.querySelector('.label-cantonese')!.textContent = i18n.t('ui.meta.cantonese');
-    document.querySelector('.label-mandarin')!.textContent = i18n.t('ui.meta.mandarin');
-
-    // Warning Banner (如果存在且正在顯示)
-    if (this.currentData && this.currentData.level !== 'HK_STANDARD') {
-      this.els.warningBanner.textContent = i18n.t('ui.alert.unverified');
+    if (currentCharData && appManifest) {
+       const unicode = currentCharData.char.codePointAt(0)?.toString(16).toUpperCase().padStart(4, '0');
+       if (unicode) updateGovernanceUI(unicode);
     }
-  }
+  };
 
-  private handleSearch() {
-    const input = this.els.inputChar.value.trim();
-    if (!input) return;
+  const updateLangSelectorUI = (currentLang: Locale) => {
+    langSelectors.forEach(btn => {
+      const isSelected = (btn as HTMLElement).dataset.lang === currentLang;
+      btn.setAttribute('aria-checked', isSelected.toString());
+      isSelected ? btn.classList.add('active') : btn.classList.remove('active');
+    });
+  };
+
+  const renderMetaCard = () => {
+    if (!currentCharData) {
+      metaRadical.textContent = '—';
+      metaTotalStrokes.textContent = '—';
+      metaJyutping.textContent = '—';
+      metaPinyin.textContent = '—';
+      btnAudioCantonese.style.display = 'none';
+      btnAudioMandarin.style.display = 'none';
+      return;
+    }
+
+    const { radical, totalStrokes, jyutping, pinyin } = currentCharData;
+    metaRadical.textContent = radical && radical !== '—' ? `${radical}${i18n.t('ui.unit.radical_suffix')}` : '—';
+    metaTotalStrokes.textContent = `${totalStrokes} ${i18n.t('ui.unit.strokes')}`;
+    metaJyutping.textContent = jyutping && jyutping.length > 0 ? jyutping.join(' / ') : '—';
+    metaPinyin.textContent = pinyin && pinyin.length > 0 ? pinyin.join(' / ') : '—';
     
-    // 嚴格擷取第一個字元 (支援 Surrogate Pairs)
-    const char = Array.from(input)[0];
-    this.loadCharacter(char);
-  }
+    btnAudioCantonese.style.display = (jyutping && jyutping.length > 0) ? 'inline-flex' : 'none';
+    btnAudioMandarin.style.display = (pinyin && pinyin.length > 0) ? 'inline-flex' : 'none';
+  };
 
-  private async loadCharacter(char: string) {
+  const setCurrentCharData = (data: StrokeData | null) => {
+    currentCharData = data;
+    renderMetaCard();
+  };
+
+  const updateGovernanceUI = (unicode: string) => {
+    const entry = appManifest?.entries?.[unicode];
+    const level: GovernanceLevel = entry?.level ?? 'HK_LIKELY'; 
+    
+    setVerifiedBadge(level === 'HK_VERIFIED');
+    
+    if (level === 'HK_DIVERGENT') {
+      showWarning(i18n.t('ui.alert.divergent'));
+    } else {
+      hideWarning();
+    }
+  };
+
+  const searchAndLoad = async (char: string) => {
+    // 競態保護 (Race Condition Protection)
+    if (currentSearchController) currentSearchController.abort();
+    currentSearchController = new AbortController();
+    const { signal } = currentSearchController;
+
     const codePoint = char.codePointAt(0);
     if (!codePoint) return;
     
     const unicode = codePoint.toString(16).toUpperCase().padStart(4, '0');
-    // 動態解析 Base URL，確保在 GitHub Pages 與本地開發環境皆可正確載入字庫
     const baseUrl = import.meta.env.BASE_URL || '/';
-    const dataUrl = `${baseUrl}data/${unicode}.json`;
-
+    
     try {
-      const response = await fetch(dataUrl);
-      if (!response.ok) throw new Error('Character not found');
+      const response = await fetch(`${baseUrl}data/${unicode}.json`, { signal });
+      if (!response.ok) throw new Error('Not found');
       
-      const data: CharacterData = await response.json();
-      this.currentData = data;
+      const data: StrokeData = await response.json();
+      setCurrentCharData(data);
       
-      // 載入畫布
-      this.canvas.loadCharacter(data);
-      this.updateMetaDataUI();
+      traceCanvas.loadCharacter(data);
+      updateGovernanceUI(unicode);
       
-      // 自動播放筆順
-      this.canvas.startAutoPlay(() => this.updatePlayBubbleState(false));
-      this.updatePlayBubbleState(true);
-      
-      // 處理資料治理警告標籤
-      if (data.level === 'HK_STANDARD') {
-        this.els.warningBanner.style.display = 'none';
-      } else {
-        this.els.warningBanner.style.display = 'block';
-        this.els.warningBanner.textContent = i18n.t('ui.alert.unverified');
-      }
+      traceCanvas.startAutoPlay(() => updatePlayBubbleState(false));
+      updatePlayBubbleState(true);
       
     } catch (err) {
-      console.warn(`[KidsWriteTC] Failed to load character: ${char}`, err);
-      alert(i18n.t('ui.alert.notFound', { char }));
-      this.currentData = null;
-      this.canvas.clearData();
-      this.updateMetaDataUI();
-      this.els.warningBanner.style.display = 'none';
-      this.updatePlayBubbleState(false);
-    }
-  }
-
-  private updateMetaDataUI() {
-    if (!this.currentData) {
-      this.els.metaRadical.textContent = '—';
-      this.els.metaTotalStrokes.textContent = '—';
-      this.els.metaJyutping.textContent = '—';
-      this.els.metaPinyin.textContent = '—';
+      // 忽略因使用者快速輸入而被阻斷的舊請求
+      if (err instanceof Error && err.name === 'AbortError') return;
       
-      this.els.btnAudioCantonese.style.display = 'none';
-      this.els.btnAudioMandarin.style.display = 'none';
-      return;
-    }
-
-    const { radical, totalStrokes, jyutping, pinyin } = this.currentData;
-    
-    this.els.metaRadical.textContent = radical && radical !== '—' 
-      ? `${radical}${i18n.t('ui.unit.radical_suffix')}` 
-      : '—';
+      showWarning(i18n.t('ui.alert.notFound', { char }), true);
       
-    this.els.metaTotalStrokes.textContent = `${totalStrokes} ${i18n.t('ui.unit.strokes')}`;
-
-    // 處理多音字顯示
-    this.els.metaJyutping.textContent = jyutping && jyutping.length > 0 ? jyutping.join(' / ') : '—';
-    this.els.metaPinyin.textContent = pinyin && pinyin.length > 0 ? pinyin.join(' / ') : '—';
-
-    // 顯示/隱藏發音按鈕
-    this.els.btnAudioCantonese.style.display = (jyutping && jyutping.length > 0) ? 'inline-flex' : 'none';
-    this.els.btnAudioMandarin.style.display = (pinyin && pinyin.length > 0) ? 'inline-flex' : 'none';
-  }
-
-  private updatePlayBubbleState(isPlaying: boolean) {
-    this.els.btnPlayBubble.textContent = isPlaying ? '⏸' : '▶';
-    this.els.btnPlayBubble.setAttribute('aria-label', isPlaying ? i18n.t('ui.button.pause') : i18n.t('ui.button.play'));
-  }
-
-  private speak(text: string | undefined, lang: 'zh-HK' | 'zh-CN') {
-    if (!text || !this.synth) return;
-    
-    // 中斷目前播放
-    if (this.synth.speaking) {
-      this.synth.cancel();
+      setCurrentCharData(null);
+      traceCanvas.clearData();
+      setVerifiedBadge(false);
+      updatePlayBubbleState(false);
     }
+  };
 
+  const speak = (text: string | undefined, lang: 'zh-HK' | 'zh-CN') => {
+    if (!text || !synth) return;
+    if (synth.speaking) synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
-    utterance.rate = 0.85; // 放慢語速，適合學童聆聽
-    
-    this.synth.speak(utterance);
-  }
+    utterance.rate = 0.85;
+    synth.speak(utterance);
+  };
+
+  const handleSearch = () => {
+    const input = elInput.value.trim();
+    if (!input) return;
+    const char = Array.from(input)[0];
+    searchAndLoad(char);
+  };
+
+  // 5. 綁定事件與語系訂閱
+  elBtnSearch.addEventListener('click', handleSearch);
+  elInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSearch(); });
+  
+  btnPrev.addEventListener('click', () => traceCanvas.prevStroke());
+  btnNext.addEventListener('click', () => traceCanvas.nextStroke());
+  btnClear.addEventListener('click', () => traceCanvas.clearInk());
+  
+  btnReplay.addEventListener('click', () => {
+    traceCanvas.clearInk();
+    traceCanvas.startAutoPlay(() => updatePlayBubbleState(false));
+    updatePlayBubbleState(true);
+  });
+
+  btnPlayBubble.addEventListener('click', () => {
+    const isPlaying = traceCanvas.toggleAutoPlay(() => updatePlayBubbleState(false));
+    updatePlayBubbleState(isPlaying);
+  });
+
+  btnAudioCantonese.addEventListener('click', () => speak(currentCharData?.char, 'zh-HK'));
+  btnAudioMandarin.addEventListener('click', () => speak(currentCharData?.char, 'zh-CN'));
+
+  langSelectors.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const target = e.target as HTMLButtonElement;
+      const lang = target.dataset.lang as Locale;
+      if (lang) {
+        i18n.setLocale(lang);
+        updateLangSelectorUI(lang);
+      }
+    });
+  });
+
+  i18n.subscribe(() => {
+    updateTexts();
+    renderMetaCard();
+  });
+
+  // 初始 UI 渲染
+  updateLangSelectorUI(i18n.getLocale());
+  updateTexts();
+
+  // 6. 載入 SSOT Manifest 並啟動預設字元
+  const loadApp = async () => {
+    try {
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const res = await fetch(`${baseUrl}data/manifest.json`);
+      if (res.ok) appManifest = await res.json();
+    } catch (err) {
+      console.warn('[KidsWriteTC] Manifest 載入失敗', err);
+    } finally {
+      searchAndLoad('上');
+    }
+  };
+
+  loadApp();
 }
 
-// 確保 DOM 載入完畢後再初始化應用程式
-window.addEventListener('DOMContentLoaded', () => {
-  new KidsWriteApp();
-});
+window.addEventListener('DOMContentLoaded', initApp);
