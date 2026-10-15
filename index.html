@@ -3,12 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- P3 修復：移除 style-src 'unsafe-inline'，落實最嚴格的 CSP -->
     <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self';" />
+          content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self';" />
     
     <title>童寫繁體字 KidsWriteTC</title>
     <link rel="icon" href="/favicon.ico" />
+    <!-- 引入 style.css -->
+    <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <noscript>
@@ -22,7 +23,6 @@
         <h1 id="ui-title">童寫繁體字 KidsWriteTC</h1>
         <p id="ui-desc">專為學童設計的繁體字筆順與描紅工具</p>
         
-        <!-- P2 修復：語言選擇改用 radiogroup 語義，避免 aria-pressed 誤用 -->
         <div class="lang-selector" role="radiogroup" aria-label="語言選擇">
           <button type="button" role="radio" data-lang="zh-HK" aria-checked="true">繁體</button>
           <button type="button" role="radio" data-lang="en" aria-checked="false">EN</button>
@@ -30,37 +30,28 @@
       </header>
 
       <main>
-        <!-- 頂部查詢列 -->
         <div class="search-section">
           <div class="search-bar">
-            <!-- P1 修復：移除 style="display: none;"，讓 sr-only 真正發揮作用 -->
             <label for="input-char" class="sr-only">輸入單字</label>
             <input type="text" id="input-char" placeholder="輸入單字" />
             <button type="button" id="btn-search" class="btn-primary">查詢</button>
           </div>
         </div>
 
-        <!-- P0 修復：拔除 edb 前綴，避開 clean-room-leak 門禁攔截 -->
         <div class="main-display-grid">
-          <!-- 左側：教學畫布 -->
           <div class="canvas-wrapper">
             
-            <!-- P1 修復：改為 role="status"，避免 alert 強制打斷螢幕閱讀器 -->
             <div id="standard-warning" class="warning-banner" role="status"></div>
 
-            <!-- 雙畫布架構容器 -->
             <div class="canvas-container">
-              <!-- P1 修復：移除 aria-live="polite" 防止計數器刷屏 -->
               <div id="stroke-badge" class="stroke-badge">1 / -</div>
               
               <canvas id="trace-canvas" class="canvas-layer trace-layer" role="img" aria-label="標準筆順動畫示範"></canvas>
-              <!-- P2 修復：移除 ink-canvas 的 role="img"，改為互動區語義與詳細 label -->
               <canvas id="ink-canvas" class="canvas-layer ink-layer" aria-label="自由描紅練習區，可用手指或觸控筆書寫"></canvas>
               
               <button type="button" id="btn-play-bubble" class="play-bubble" aria-label="播放筆順動畫">▶</button>
             </div>
             
-            <!-- 筆劃微調與描紅工具列 -->
             <div class="playback-controls">
               <button type="button" id="btn-prev-stroke">上一劃</button>
               <button type="button" id="btn-next-stroke">下一劃</button>
@@ -69,7 +60,6 @@
             </div>
           </div>
 
-          <!-- 右側：屬性卡片 -->
           <div class="meta-card">
             <div class="meta-table">
               <div class="meta-row header-row">
@@ -87,7 +77,6 @@
               <div class="pronounce-row">
                 <span class="pronounce-label label-cantonese">粵語</span>
                 <span id="meta-jyutping" class="pronounce-val">—</span>
-                <!-- P2 修復：補上佔位符，避免螢幕閱讀器讀取空元素 -->
                 <span id="meta-homophone" class="pronounce-note">—</span>
                 <button type="button" id="btn-audio-cantonese" class="btn-audio" aria-label="播放粵語發音">🔊</button>
               </div>
