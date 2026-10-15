@@ -1,321 +1,249 @@
-// src/ui/canvas-trace.ts
+// src/main.ts
+import { TraceCanvas, StrokeData } from './ui/canvas-trace';
+import { i18n, Locale } from './core/i18n';
 
-export interface StrokeData {
-  char: string;
-  unicode: string;
-  totalStrokes?: number;
-  radical?: string;      // 新增：部首
-  jyutping?: string[];   // 新增：粵拼 (陣列，支援多音字)
-  pinyin?: string[];     // 新增：普拼 (陣列，支援多音字)
-  strokes: string[]; 
-  medians?: number[][][]; 
+// 擴充 StrokeData 以包含資料治理標記
+interface CharacterData extends StrokeData {
+  level: 'UNVERIFIED' | 'HK_STANDARD' | 'FALLBACK';
 }
 
-export class TraceCanvas {
-  // 雙層畫布架構
-  private traceCanvas: HTMLCanvasElement;
-  private traceCtx: CanvasRenderingContext2D;
-  private inkCanvas: HTMLCanvasElement;
-  private inkCtx: CanvasRenderingContext2D;
-  
-  private strokeBadge: HTMLElement | null;
-  private currentData: StrokeData | null = null;
-  
-  // 嚴格封裝狀態
-  private _currentStrokeIndex: number = 1;
-  public get currentStrokeIndex(): number {
-    return this._currentStrokeIndex;
-  }
+class KidsWriteApp {
+  private canvas: TraceCanvas;
+  private currentData: CharacterData | null = null;
+  private synth = window.speechSynthesis;
 
-  private isPlaying: boolean = false;
-  private playTimer: number | null = null;
-  private strokeInterval: number = 1100;
-  private isDrawing: boolean = false;
+  // DOM 節點緩存
+  private els = {
+    inputChar: document.getElementById('input-char') as HTMLInputElement,
+    btnSearch: document.getElementById('btn-search') as HTMLButtonElement,
+    
+    // Playback Controls
+    btnPrev: document.getElementById('btn-prev-stroke') as HTMLButtonElement,
+    btnNext: document.getElementById('btn-next-stroke') as HTMLButtonElement,
+    btnReplay: document.getElementById('btn-replay') as HTMLButtonElement,
+    btnClear: document.getElementById('btn-clear') as HTMLButtonElement,
+    btnPlayBubble: document.getElementById('btn-play-bubble') as HTMLButtonElement,
+    
+    // Meta Info
+    metaRadical: document.getElementById('meta-radical') as HTMLElement,
+    metaTotalStrokes: document.getElementById('meta-total-strokes') as HTMLElement,
+    metaJyutping: document.getElementById('meta-jyutping') as HTMLElement,
+    metaPinyin: document.getElementById('meta-pinyin') as HTMLElement,
+    
+    // Audio
+    btnAudioCantonese: document.getElementById('btn-audio-cantonese') as HTMLButtonElement,
+    btnAudioMandarin: document.getElementById('btn-audio-mandarin') as HTMLButtonElement,
+    
+    // Status
+    warningBanner: document.getElementById('standard-warning') as HTMLElement,
+    langSelectors: document.querySelectorAll('.lang-selector button')
+  };
 
-  private dpr: number = 1;
-  private canvasWidth: number = 300; 
-  private abortController = new AbortController();
-  private resizeTimer: number | null = null;
-
-  constructor(traceId: string, inkId: string, badgeId: string = 'stroke-badge') {
-    const traceEl = document.getElementById(traceId) as HTMLCanvasElement;
-    const inkEl = document.getElementById(inkId) as HTMLCanvasElement;
+  constructor() {
+    this.canvas = new TraceCanvas('trace-canvas', 'ink-canvas', 'stroke-badge');
     
-    if (!traceEl || !inkEl) throw new Error('找不到 Trace 或 Ink Canvas 容器');
-    
-    this.traceCanvas = traceEl;
-    this.traceCtx = this.traceCanvas.getContext('2d')!;
-    
-    this.inkCanvas = inkEl;
-    this.inkCtx = this.inkCanvas.getContext('2d')!;
-    
-    this.strokeBadge = document.getElementById(badgeId);
-
-    this.initRetinaDisplay();
     this.bindEvents();
-
-    window.addEventListener('resize', () => {
-      if (this.resizeTimer) clearTimeout(this.resizeTimer);
-      this.resizeTimer = window.setTimeout(() => {
-        // 保留學生筆跡，避免旋轉 iPad 導致心血白費
-        const savedInk = this.inkCanvas.width > 0 && this.inkCanvas.height > 0
-          ? this.inkCtx.getImageData(0, 0, this.inkCanvas.width, this.inkCanvas.height)
-          : null;
-
-        this.initRetinaDisplay();
-        this.renderTrace();
-
-        if (savedInk) {
-          this.inkCtx.putImageData(savedInk, 0, 0);
-        }
-      }, 150);
-    }, { signal: this.abortController.signal });
-  }
-
-  public destroy() {
-    this.stopAutoPlay();
-    this.abortController.abort();
-    if (this.resizeTimer) clearTimeout(this.resizeTimer);
-  }
-
-  public setStrokeInterval(ms: number) {
-    this.strokeInterval = ms;
-  }
-
-  private initRetinaDisplay() {
-    this.dpr = window.devicePixelRatio || 1;
+    this.setupI18n();
     
-    const rect = this.inkCanvas.getBoundingClientRect();
-    
-    // 無條件捨去，確保 Canvas 的像素緩衝區絕對是整數，避免跨平台 Retina 亞像素模糊
-    const w = Math.floor(rect.width);
-    const h = Math.floor(rect.height);
-    
-    this.canvasWidth = w;
-
-    [this.traceCanvas, this.inkCanvas].forEach(canvas => {
-      canvas.width = Math.floor(w * this.dpr);
-      canvas.height = Math.floor(h * this.dpr);
-    });
-
-    this.traceCtx.setTransform(1, 0, 0, 1, 0, 0);
-    this.traceCtx.scale(this.dpr, this.dpr);
-    
-    this.inkCtx.setTransform(1, 0, 0, 1, 0, 0);
-    this.inkCtx.scale(this.dpr, this.dpr);
-
-    this.inkCtx.lineCap = 'round';
-    this.inkCtx.lineJoin = 'round';
-    this.inkCtx.lineWidth = 16;
-    this.inkCtx.strokeStyle = 'rgba(25, 118, 210, 0.85)';
-  }
-
-  public loadCharacter(data: StrokeData) {
-    this.stopAutoPlay();
-    this.isDrawing = false;
-    this.currentData = data;
-    this._currentStrokeIndex = 1;
-    this.clearInk(); 
-    this.renderTrace();
-  }
-
-  // 統一的狀態清除出口，解決 404 時的狀態洩漏 (State Leak)
-  public clearData() {
-    this.stopAutoPlay();
-    this.currentData = null;
-    this._currentStrokeIndex = 1;
-    this.clearInk();
-    this.renderTrace();
-  }
-
-  private drawGrid() {
-    this.traceCtx.save();
-    // 加深網格線顏色，確保在白色背景上的清晰辨識度 (淡朱砂色)
-    this.traceCtx.strokeStyle = '#E0A0A0';
-    this.traceCtx.lineWidth = 3;
-    
-    this.traceCtx.beginPath();
-    this.traceCtx.moveTo(0, 512); this.traceCtx.lineTo(1024, 512);
-    this.traceCtx.moveTo(512, 0); this.traceCtx.lineTo(512, 1024);
-    this.traceCtx.moveTo(0, 0); this.traceCtx.lineTo(1024, 1024);
-    this.traceCtx.moveTo(1024, 0); this.traceCtx.lineTo(0, 1024);
-    
-    this.traceCtx.stroke();
-    this.traceCtx.restore();
-  }
-
-  public renderTrace() {
-    if (!this.canvasWidth) return;
-
-    this.traceCtx.save();
-    this.traceCtx.setTransform(1, 0, 0, 1, 0, 0);
-    this.traceCtx.clearRect(0, 0, this.traceCanvas.width, this.traceCanvas.height);
-    this.traceCtx.restore();
-
-    // 統一在此處理 strokeBadge，徹底消除狀態洩漏
-    if (this.strokeBadge) {
-      if (this.currentData) {
-        const total = this.currentData.totalStrokes || this.currentData.strokes.length;
-        this.strokeBadge.textContent = `${this._currentStrokeIndex} / ${total}`;
-      } else {
-        this.strokeBadge.textContent = '- / -';
-      }
-    }
-
-    const scaleFactor = this.canvasWidth / 1024;
-    
-    this.traceCtx.save();
-    this.traceCtx.scale(scaleFactor, scaleFactor);
-    this.traceCtx.translate(0, 1024);
-    this.traceCtx.scale(1, -1);
-
-    this.drawGrid();
-
-    // 無資料則提早返回 (米字格與 Badge 已正確設定)
-    if (!this.currentData) {
-      this.traceCtx.restore();
-      return;
-    }
-
-    this.currentData.strokes.forEach((strokePath, index) => {
-      const strokeNumber = index + 1;
-      
-      try {
-        const path = new Path2D(strokePath);
-
-        if (strokeNumber < this._currentStrokeIndex) {
-          this.traceCtx.fillStyle = '#424242'; 
-        } else if (strokeNumber === this._currentStrokeIndex) {
-          this.traceCtx.fillStyle = '#d32f2f'; 
-        } else {
-          this.traceCtx.fillStyle = '#e0e0e0'; 
-        }
-        
-        this.traceCtx.fill(path);
-      } catch (err) {
-        console.warn(`無效的 SVG Path 於第 ${strokeNumber} 劃`);
-      }
-    });
-
-    this.traceCtx.restore();
-  }
-
-  public nextStroke() {
-    if (!this.currentData) return;
-    const total = this.currentData.totalStrokes || this.currentData.strokes.length;
-    if (this._currentStrokeIndex < total) {
-      this._currentStrokeIndex++;
-      this.renderTrace();
-    }
-  }
-
-  public prevStroke() {
-    if (!this.currentData) return;
-    if (this._currentStrokeIndex > 1) {
-      this._currentStrokeIndex--;
-      this.renderTrace();
-    }
-  }
-
-  public toggleAutoPlay(onComplete?: () => void): boolean {
-    if (this.isPlaying) {
-      this.stopAutoPlay();
-    } else {
-      this.startAutoPlay(onComplete);
-    }
-    return this.isPlaying;
-  }
-
-  public startAutoPlay(onComplete?: () => void) {
-    if (!this.currentData || this.isPlaying) return;
-    this.isPlaying = true;
-    
-    const total = this.currentData.totalStrokes || this.currentData.strokes.length;
-    
-    if (this._currentStrokeIndex >= total) {
-      this._currentStrokeIndex = 1;
-      this.clearInk();
-    }
-    
-    this.renderTrace();
-
-    this.playTimer = window.setInterval(() => {
-      if (!this.currentData) return;
-      if (this._currentStrokeIndex < total) {
-        this._currentStrokeIndex++;
-        this.renderTrace();
-      } else {
-        this.stopAutoPlay();
-        if (onComplete) onComplete();
-      }
-    }, this.strokeInterval);
-  }
-
-  public stopAutoPlay() {
-    this.isPlaying = false;
-    if (this.playTimer) {
-      clearInterval(this.playTimer);
-      this.playTimer = null;
-    }
-  }
-
-  public clearInk() {
-    this.inkCtx.save();
-    this.inkCtx.setTransform(1, 0, 0, 1, 0, 0);
-    this.inkCtx.clearRect(0, 0, this.inkCanvas.width, this.inkCanvas.height);
-    this.inkCtx.restore();
+    // 🚀 仔仔專屬彩蛋：系統初始化時，預設載入「上」字
+    this.loadCharacter('上');
   }
 
   private bindEvents() {
-    const opts = { signal: this.abortController.signal };
-    this.inkCanvas.style.touchAction = 'none';
+    // 搜尋功能 (按鈕與 Enter 鍵)
+    this.els.btnSearch.addEventListener('click', () => this.handleSearch());
+    this.els.inputChar.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.handleSearch();
+    });
 
-    const getPos = (e: PointerEvent) => {
-      const rect = this.inkCanvas.getBoundingClientRect();
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      };
-    };
+    // 畫布控制
+    this.els.btnPrev.addEventListener('click', () => this.canvas.prevStroke());
+    this.els.btnNext.addEventListener('click', () => this.canvas.nextStroke());
+    this.els.btnClear.addEventListener('click', () => this.canvas.clearInk());
+    
+    this.els.btnReplay.addEventListener('click', () => {
+      this.canvas.clearInk();
+      this.canvas.startAutoPlay(() => this.updatePlayBubbleState(false));
+      this.updatePlayBubbleState(true);
+    });
 
-    const start = (e: PointerEvent) => {
-      e.preventDefault();
-      this.inkCanvas.setPointerCapture(e.pointerId);
-      this.isDrawing = true;
-      const pos = getPos(e);
-      this.inkCtx.beginPath();
-      this.inkCtx.moveTo(pos.x, pos.y);
-    };
+    this.els.btnPlayBubble.addEventListener('click', () => {
+      const isPlaying = this.canvas.toggleAutoPlay(() => this.updatePlayBubbleState(false));
+      this.updatePlayBubbleState(isPlaying);
+    });
 
-    const move = (e: PointerEvent) => {
-      e.preventDefault();
-      if (!this.isDrawing) return;
-      
-      const pos = getPos(e);
-      this.inkCtx.lineTo(pos.x, pos.y);
-      this.inkCtx.stroke();
-    };
+    // 語音播放 (TTS)
+    this.els.btnAudioCantonese.addEventListener('click', () => this.speak(this.currentData?.char, 'zh-HK'));
+    this.els.btnAudioMandarin.addEventListener('click', () => this.speak(this.currentData?.char, 'zh-CN'));
 
-    const stop = (e: PointerEvent) => {
-      e.preventDefault();
-      if (this.isDrawing) {
-        this.inkCtx.closePath();
-        this.isDrawing = false;
-        
-        // 強制中斷防呆 (Ghost Stroke 防護)
-        try {
-          if (this.inkCanvas.hasPointerCapture(e.pointerId)) {
-            this.inkCanvas.releasePointerCapture(e.pointerId);
-          }
-        } catch {
-          // 指標已遭系統隱式釋放，靜默忽略即可
+    // 語言切換
+    this.els.langSelectors.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.target as HTMLButtonElement;
+        const lang = target.dataset.lang as Locale;
+        if (lang) {
+          i18n.setLocale(lang);
+          this.updateLangSelectorUI(lang);
         }
-      }
-    };
+      });
+    });
+  }
 
-    this.inkCanvas.addEventListener('pointerdown', start, opts);
-    this.inkCanvas.addEventListener('pointermove', move, opts);
-    this.inkCanvas.addEventListener('pointerup', stop, opts);
-    this.inkCanvas.addEventListener('pointercancel', stop, opts);
+  private setupI18n() {
+    // 初始化 UI 狀態
+    this.updateLangSelectorUI(i18n.getLocale());
+    this.updateTexts();
+
+    // 訂閱語系變更
+    i18n.subscribe(() => {
+      this.updateTexts();
+      this.updateMetaDataUI(); // 重新渲染部首/筆畫數單位
+    });
+  }
+
+  private updateLangSelectorUI(currentLang: Locale) {
+    this.els.langSelectors.forEach(btn => {
+      const isSelected = btn.dataset.lang === currentLang;
+      btn.setAttribute('aria-checked', isSelected.toString());
+      if (isSelected) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  private updateTexts() {
+    // Header
+    document.getElementById('ui-title')!.textContent = i18n.t('app.title');
+    document.getElementById('ui-desc')!.textContent = i18n.t('ui.description');
+    
+    // Search
+    this.els.inputChar.placeholder = i18n.t('ui.search.placeholder');
+    this.els.btnSearch.textContent = i18n.t('ui.search.button');
+    
+    // Controls
+    this.els.btnPrev.textContent = i18n.t('ui.button.prev');
+    this.els.btnNext.textContent = i18n.t('ui.button.next');
+    this.els.btnReplay.textContent = i18n.t('ui.button.replay');
+    this.els.btnClear.textContent = i18n.t('ui.button.clear');
+
+    // Labels
+    document.querySelector('.label-radical')!.textContent = i18n.t('ui.meta.radical');
+    document.querySelector('.label-total-strokes')!.textContent = i18n.t('ui.meta.totalStrokes');
+    document.querySelector('.label-pronounce')!.textContent = i18n.t('ui.meta.pronounce');
+    document.querySelector('.label-cantonese')!.textContent = i18n.t('ui.meta.cantonese');
+    document.querySelector('.label-mandarin')!.textContent = i18n.t('ui.meta.mandarin');
+
+    // Warning Banner (如果存在且正在顯示)
+    if (this.currentData && this.currentData.level !== 'HK_STANDARD') {
+      this.els.warningBanner.textContent = i18n.t('ui.alert.unverified');
+    }
+  }
+
+  private handleSearch() {
+    const input = this.els.inputChar.value.trim();
+    if (!input) return;
+    
+    // 嚴格擷取第一個字元 (支援 Surrogate Pairs)
+    const char = Array.from(input)[0];
+    this.loadCharacter(char);
+  }
+
+  private async loadCharacter(char: string) {
+    const codePoint = char.codePointAt(0);
+    if (!codePoint) return;
+    
+    const unicode = codePoint.toString(16).toUpperCase().padStart(4, '0');
+    // 動態解析 Base URL，確保在 GitHub Pages 與本地開發環境皆可正確載入字庫
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const dataUrl = `${baseUrl}data/${unicode}.json`;
+
+    try {
+      const response = await fetch(dataUrl);
+      if (!response.ok) throw new Error('Character not found');
+      
+      const data: CharacterData = await response.json();
+      this.currentData = data;
+      
+      // 載入畫布
+      this.canvas.loadCharacter(data);
+      this.updateMetaDataUI();
+      
+      // 自動播放筆順
+      this.canvas.startAutoPlay(() => this.updatePlayBubbleState(false));
+      this.updatePlayBubbleState(true);
+      
+      // 處理資料治理警告標籤
+      if (data.level === 'HK_STANDARD') {
+        this.els.warningBanner.style.display = 'none';
+      } else {
+        this.els.warningBanner.style.display = 'block';
+        this.els.warningBanner.textContent = i18n.t('ui.alert.unverified');
+      }
+      
+    } catch (err) {
+      console.warn(`[KidsWriteTC] Failed to load character: ${char}`, err);
+      alert(i18n.t('ui.alert.notFound', { char }));
+      this.currentData = null;
+      this.canvas.clearData();
+      this.updateMetaDataUI();
+      this.els.warningBanner.style.display = 'none';
+      this.updatePlayBubbleState(false);
+    }
+  }
+
+  private updateMetaDataUI() {
+    if (!this.currentData) {
+      this.els.metaRadical.textContent = '—';
+      this.els.metaTotalStrokes.textContent = '—';
+      this.els.metaJyutping.textContent = '—';
+      this.els.metaPinyin.textContent = '—';
+      
+      this.els.btnAudioCantonese.style.display = 'none';
+      this.els.btnAudioMandarin.style.display = 'none';
+      return;
+    }
+
+    const { radical, totalStrokes, jyutping, pinyin } = this.currentData;
+    
+    this.els.metaRadical.textContent = radical && radical !== '—' 
+      ? `${radical}${i18n.t('ui.unit.radical_suffix')}` 
+      : '—';
+      
+    this.els.metaTotalStrokes.textContent = `${totalStrokes} ${i18n.t('ui.unit.strokes')}`;
+
+    // 處理多音字顯示
+    this.els.metaJyutping.textContent = jyutping && jyutping.length > 0 ? jyutping.join(' / ') : '—';
+    this.els.metaPinyin.textContent = pinyin && pinyin.length > 0 ? pinyin.join(' / ') : '—';
+
+    // 顯示/隱藏發音按鈕
+    this.els.btnAudioCantonese.style.display = (jyutping && jyutping.length > 0) ? 'inline-flex' : 'none';
+    this.els.btnAudioMandarin.style.display = (pinyin && pinyin.length > 0) ? 'inline-flex' : 'none';
+  }
+
+  private updatePlayBubbleState(isPlaying: boolean) {
+    this.els.btnPlayBubble.textContent = isPlaying ? '⏸' : '▶';
+    this.els.btnPlayBubble.setAttribute('aria-label', isPlaying ? i18n.t('ui.button.pause') : i18n.t('ui.button.play'));
+  }
+
+  private speak(text: string | undefined, lang: 'zh-HK' | 'zh-CN') {
+    if (!text || !this.synth) return;
+    
+    // 中斷目前播放
+    if (this.synth.speaking) {
+      this.synth.cancel();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.rate = 0.85; // 放慢語速，適合學童聆聽
+    
+    this.synth.speak(utterance);
   }
 }
+
+// 確保 DOM 載入完畢後再初始化應用程式
+window.addEventListener('DOMContentLoaded', () => {
+  new KidsWriteApp();
+});
