@@ -231,6 +231,30 @@ h1 {
   z-index: 3;
 }
 
+/* === 專家核定徽章 (HK_VERIFIED) === */
+.verified-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #2e7d32;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.verified-badge.visible {
+  display: inline-flex;
+}
+
 /* 播放按鈕 */
 .play-bubble {
   position: absolute;
