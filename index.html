@@ -8,7 +8,6 @@
     
     <title>童寫繁體字 KidsWriteTC</title>
     <link rel="icon" href="/favicon.ico" />
-    <!-- 引入 style.css -->
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -21,7 +20,6 @@
     <div id="app">
       <header>
         <h1 id="ui-title">童寫繁體字 KidsWriteTC</h1>
-        <!-- 修正用語：改為寫字練習 -->
         <p id="ui-desc">專為學童設計的繁體字筆順與寫字練習工具</p>
         
         <div class="lang-selector" role="radiogroup" aria-label="語言選擇">
@@ -47,8 +45,10 @@
             <div class="canvas-container">
               <div id="stroke-badge" class="stroke-badge">1 / -</div>
               
+              <!-- 👇 補齊此關鍵 DOM 節點：專家核定綠色徽章 -->
+              <div id="badge-verified" class="verified-badge" aria-label="港標核定" title="專家已核定港標">✓</div>
+              
               <canvas id="trace-canvas" class="canvas-layer trace-layer" role="img" aria-label="標準筆順動畫示範"></canvas>
-              <!-- 修正用語：改為寫字練習區 -->
               <canvas id="ink-canvas" class="canvas-layer ink-layer" aria-label="自由寫字練習區，可用手指或觸控筆書寫"></canvas>
               
               <button type="button" id="btn-play-bubble" class="play-bubble" aria-label="播放筆順動畫">▶</button>
