@@ -1,13 +1,13 @@
 {
   "name": "KidsWriteTC",
   "version": "1.0.0",
-  "description": "專為香港小學生設計的純淨繁體字筆順描紅教學工具",
+  "description": "專為香港小學生設計的純淨繁體字筆順與寫字練習工具",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "test": "vitest",
-    "build:data": "tsx scripts/build-data.ts"
+    "build:data": "tsx scripts/build-data.ts",
+    "build": "pnpm build:data && vite build",
+    "test": "vitest"
   },
   "packageManager": "pnpm@12.11.2",
   "devDependencies": {
