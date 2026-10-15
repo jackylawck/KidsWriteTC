@@ -9,6 +9,7 @@ public/data.tmp/
 data/raw/
 # data/compiled/  <-- 加上註解，解除封印讓字典上雲端！
 reports/
+build-reports/    <-- 加上這行，隔離編譯錯誤報告！
 
 # IDE 配置
 .idea/
