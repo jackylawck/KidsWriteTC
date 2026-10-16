@@ -1,12 +1,71 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="zh-HK" prefix="og: https://ogp.me/ns#">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self';" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover" />
     
-    <title>童寫繁體字 KidsWriteTC</title>
+    <!-- 🔍 Google 網站驗證 (Google Search Console) -->
+    <meta name="google-site-verification" content="JZ5UohX-CcP_fQV0_DI9VadkKY4ZoTTkUifL88-fIcY" />
+
+    <!-- 🔍 基礎 SEO 核心標籤 -->
+    <title>童寫繁體字 KidsWriteTC | 專為香港學童設計的繁體字筆順與寫字練習工具</title>
+    <meta name="description" content="專為香港初小學童設計的繁體字筆順示範與描紅寫字 PWA 工具。具備雙層畫布、港標三態資料治理、粵普雙語發音，完全零資料收集，私隱優先。" />
+    <meta name="keywords" content="童寫繁體字, KidsWriteTC, 繁體字, 筆順, 寫字練習, 香港教育局, 描紅, 兒童教育, PWA, 乾淨室架構, 零私隱風險" />
+    <meta name="author" content="Jacky Law" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://jackylawck.github.io/KidsWriteTC/" />
+
+    <!-- 🌐 Open Graph / Facebook / LinkedIn 社交卡片 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jackylawck.github.io/KidsWriteTC/" />
+    <meta property="og:title" content="童寫繁體字 KidsWriteTC | 港標筆順與寫字練習" />
+    <meta property="og:description" content="零私隱風險的兒童練字工具！支援雙層畫布描紅、三態資料治理與粵普發音，陪伴孩子寫好每一個繁體字。" />
+    <meta property="og:image" content="https://jackylawck.github.io/KidsWriteTC/KidsWriteTC512icon.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="KidsWriteTC 童寫繁體字標誌" />
+    <meta property="og:locale" content="zh_HK" />
+    <meta property="og:site_name" content="童寫繁體字 KidsWriteTC" />
+
+    <!-- 🐦 Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="童寫繁體字 KidsWriteTC | 港標筆順練字工具" />
+    <meta name="twitter:description" content="零私隱風險的兒童練字工具！支援雙層畫布描紅、三態資料治理與粵普發音，陪伴孩子寫好每一個繁體字。" />
+    <meta name="twitter:image" content="https://jackylawck.github.io/KidsWriteTC/KidsWriteTC512icon.png" />
+
+    <!-- 📱 PWA 與行動裝置設定 (支援加入手機主畫面) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="童寫繁體字" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#b71c1c" />
+    <meta name="application-name" content="KidsWriteTC" />
+    
+    <!-- 🍎 iOS 與 Android 桌面圖示 (將生成的圖示放入 public 資料夾) -->
+    <link rel="apple-touch-icon" sizes="192x192" href="/KidsWriteTC192icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/KidsWriteTC192icon.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/KidsWriteTC512icon.png" />
+    
+    <!-- PWA Web Manifest (建議後續在 public 內加入 manifest.webmanifest 檔案) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- 🛡️ 企業級安全策略：Content Security Policy (CSP) 與權限隔離 -->
+    <!-- 嚴格限制來源，防禦 XSS，並拒絕任何硬體權限 (無相機、無麥克風、無定位) -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: blob: https://jackylawck.github.io;
+      font-src 'self' data:;
+      connect-src 'self';
+      media-src 'self' data:;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'none';
+    " />
+    <meta http-equiv="Permissions-Policy" content="accelerometer=(), gyroscope=(), microphone=(), camera=(), geolocation=(), payment=()" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
     <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
@@ -19,7 +78,7 @@
 
     <div id="app">
       <header>
-        <h1 id="ui-title">童寫繁體字</h1>
+        <h1 id="ui-title">童寫繁體字 KidsWriteTC</h1>
         <p id="ui-desc">專為學童設計的繁體字筆順與寫字練習工具</p>
         
         <div class="lang-selector" role="radiogroup" aria-label="語言選擇">
@@ -39,21 +98,14 @@
 
         <div class="main-display-grid">
           <div class="canvas-wrapper">
-            
             <div id="standard-warning" class="warning-banner" role="status"></div>
-
             <div class="canvas-container">
               <div id="stroke-badge" class="stroke-badge">1 / -</div>
-              
-              <!-- 👇 補齊此關鍵 DOM 節點：專家核定綠色徽章 -->
               <div id="badge-verified" class="verified-badge" aria-label="港標核定" title="專家已核定港標">✓</div>
-              
               <canvas id="trace-canvas" class="canvas-layer trace-layer" role="img" aria-label="標準筆順動畫示範"></canvas>
               <canvas id="ink-canvas" class="canvas-layer ink-layer" aria-label="自由寫字練習區，可用手指或觸控筆書寫"></canvas>
-              
               <button type="button" id="btn-play-bubble" class="play-bubble" aria-label="播放筆順動畫">▶</button>
             </div>
-            
             <div class="playback-controls">
               <button type="button" id="btn-prev-stroke">上一劃</button>
               <button type="button" id="btn-next-stroke">下一劃</button>
