@@ -127,6 +127,10 @@ h1 {
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
+  
+  /* 👇 修復：確保按鈕有足夠寬度且文字絕對不會被折行變直排 */
+  white-space: nowrap;
+  min-width: max-content;
 }
 
 #btn-search:hover {
@@ -420,7 +424,21 @@ h1 {
   background: rgba(2, 136, 209, 0.1);
 }
 
-/* 無障礙設定 */
+/* === 無障礙設定與排版修復 === */
+
+/* 👇 修復：隱藏給螢幕閱讀器的標籤，釋放橫向空間，避免 Flex 擠壓 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 button:focus-visible, 
 .search-bar input:focus-visible {
   outline: 2px solid #0288d1;
