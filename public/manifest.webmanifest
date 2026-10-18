@@ -1,0 +1,26 @@
+{
+  "name": "童寫繁體字 KidsWriteTC",
+  "short_name": "童寫繁體字",
+  "description": "專為香港初小學童設計的繁體字筆順與寫字練習工具",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdfaf2",
+  "theme_color": "#b71c1c",
+  "lang": "zh-HK",
+  "icons": [
+    {
+      "src": "./KidsWriteTC192icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./KidsWriteTC512icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
