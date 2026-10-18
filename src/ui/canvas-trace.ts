@@ -163,21 +163,39 @@ export class TraceCanvas {
       this.strokeBadge.textContent = `${this._currentStrokeIndex} / ${total}`;
     }
 
-    const scaleFactor = this.canvasWidth / 1024;
-    
+    // 👇 1. 先繪製底層網格 (Grid 必須撐滿整個畫布，不受字體縮放影響)
+    const baseScaleFactor = this.canvasWidth / 1024;
     this.traceCtx.save();
-    this.traceCtx.scale(scaleFactor, scaleFactor);
+    this.traceCtx.scale(baseScaleFactor, baseScaleFactor);
     this.traceCtx.translate(0, 1024);
     this.traceCtx.scale(1, -1);
-
-    // 任何狀態下都必須繪製米字格底圖
     this.drawGrid();
+    this.traceCtx.restore(); // 畫完網格後恢復畫布原始狀態
 
     // 無字元資料則直接返回，只留下乾淨的米字格
     if (!this.currentData) {
-      this.traceCtx.restore();
       return;
     }
+
+    // 👇 2. 設定 85% 安全縮放比例 (Safe Area Padding)
+    // 解決 MakeMeAHanzi 部分字體突破 1024x1024 邊界而遭切邊的問題
+    const safeScale = 0.85;
+    const finalScaleFactor = baseScaleFactor * safeScale;
+
+    // 計算置中偏移量，使縮小 15% 的字體完美落在 1024 米字格的物理正中央
+    const centerOffset = (this.canvasWidth * (1 - safeScale)) / 2;
+
+    this.traceCtx.save();
+    
+    // 平移畫布到偏移量起點
+    this.traceCtx.translate(centerOffset, centerOffset);
+    
+    // 套用包含安全防護的新縮放比例
+    this.traceCtx.scale(finalScaleFactor, finalScaleFactor);
+    
+    // 將 Y 軸反轉 (因 SVG path 是 Cartesian 座標系)
+    this.traceCtx.translate(0, 1024);
+    this.traceCtx.scale(1, -1);
 
     this.currentData.strokes.forEach((strokePath, index) => {
       const strokeNumber = index + 1;
