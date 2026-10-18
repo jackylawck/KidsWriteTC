@@ -41,13 +41,12 @@
     <meta name="theme-color" content="#b71c1c" />
     <meta name="application-name" content="KidsWriteTC" />
     
-    <!-- 🍎 iOS 與 Android 桌面圖示 (將生成的圖示放入 public 資料夾) -->
-    <link rel="apple-touch-icon" sizes="192x192" href="/KidsWriteTC192icon.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/KidsWriteTC192icon.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/KidsWriteTC512icon.png" />
-    
-    <!-- PWA Web Manifest (建議後續在 public 內加入 manifest.webmanifest 檔案) -->
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- 👇 修復：將 / 改為 ./ 確保 GitHub Pages 子目錄能正確讀取 public 內的靜態圖示 -->
+    <link rel="apple-touch-icon" sizes="192x192" href="./KidsWriteTC192icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./KidsWriteTC192icon.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./KidsWriteTC512icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./favicon.ico" />
 
     <!-- 🛡️ 企業級安全策略：Content Security Policy (CSP) 與權限隔離 -->
     <!-- 嚴格限制來源，防禦 XSS，並拒絕任何硬體權限 (無相機、無麥克風、無定位) -->
@@ -66,7 +65,6 @@
     <meta http-equiv="Permissions-Policy" content="accelerometer=(), gyroscope=(), microphone=(), camera=(), geolocation=(), payment=()" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
-    <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
