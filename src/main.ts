@@ -203,9 +203,31 @@ function initApp() {
   const speak = (text: string | undefined, lang: 'zh-HK' | 'zh-CN') => {
     if (!text || !synth) return;
     if (synth.speaking) synth.cancel();
+    
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
     utterance.rate = 0.85;
+
+    // 👇 解決 iOS Safari 無視 lang 設定，強制配對正確的語音包
+    const voices = synth.getVoices();
+    let targetVoice = undefined;
+
+    if (lang === 'zh-HK') {
+      // 嚴格篩選廣東話語音包
+      targetVoice = voices.find(v => /yue|cantonese|hong kong|zh-hk|粵語|廣東話/i.test(v.name + ' ' + v.lang));
+    } else if (lang === 'zh-CN') {
+      // 嚴格篩選普通話/國語語音包，並「強制排除」任何包含廣東話關鍵字的語音
+      targetVoice = voices.find(v => 
+        /zh-cn|zh-tw|mandarin|cmn/i.test(v.lang + ' ' + v.name) && 
+        !/yue|cantonese|hong kong|zh-hk|粵語|廣東話/i.test(v.name + ' ' + v.lang)
+      );
+    }
+
+    // 如果有成功抓到正確的真實語音包，強制綁定
+    if (targetVoice) {
+      utterance.voice = targetVoice;
+    }
+
     synth.speak(utterance);
   };
 
