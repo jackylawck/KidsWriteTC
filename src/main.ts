@@ -20,7 +20,15 @@ interface AppManifest {
 }
 
 function initApp() {
-  // 1. 狀態變數 (純閉包管理，無 this 包袱)
+  // 👇 終極防線 1：強制喚醒 iOS Safari 語音庫，解決 getVoices() 偷懶回傳空陣列的 Bug
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.getVoices();
+    };
+  }
+
+  // 1. 狀態變數
   let appManifest: AppManifest | null = null;
   let currentCharData: StrokeData | null = null;
   let currentSearchController: AbortController | null = null;
@@ -55,11 +63,8 @@ function initApp() {
     if (!elWarning) return;
     elWarning.style.display = 'block';
     elWarning.classList.add('visible');
-    if (isError) {
-      elWarning.classList.add('warning-error');
-    } else {
-      elWarning.classList.remove('warning-error');
-    }
+    if (isError) elWarning.classList.add('warning-error');
+    else elWarning.classList.remove('warning-error');
     elWarning.textContent = text;
   };
 
@@ -94,20 +99,11 @@ function initApp() {
     btnReplay.textContent = i18n.t('ui.button.replay');
     btnClear.textContent = i18n.t('ui.button.clear');
     
-    const labelRadical = document.querySelector('.label-radical');
-    if (labelRadical) labelRadical.textContent = i18n.t('ui.meta.radical');
-    
-    const labelTotalStrokes = document.querySelector('.label-total-strokes');
-    if (labelTotalStrokes) labelTotalStrokes.textContent = i18n.t('ui.meta.totalStrokes');
-    
-    const labelPronounce = document.querySelector('.label-pronounce');
-    if (labelPronounce) labelPronounce.textContent = i18n.t('ui.meta.pronounce');
-    
-    const labelCantonese = document.querySelector('.label-cantonese');
-    if (labelCantonese) labelCantonese.textContent = i18n.t('ui.meta.cantonese');
-    
-    const labelMandarin = document.querySelector('.label-mandarin');
-    if (labelMandarin) labelMandarin.textContent = i18n.t('ui.meta.mandarin');
+    document.querySelector('.label-radical')!.textContent = i18n.t('ui.meta.radical');
+    document.querySelector('.label-total-strokes')!.textContent = i18n.t('ui.meta.totalStrokes');
+    document.querySelector('.label-pronounce')!.textContent = i18n.t('ui.meta.pronounce');
+    document.querySelector('.label-cantonese')!.textContent = i18n.t('ui.meta.cantonese');
+    document.querySelector('.label-mandarin')!.textContent = i18n.t('ui.meta.mandarin');
 
     if (currentCharData && appManifest) {
        const unicode = currentCharData.char.codePointAt(0)?.toString(16).toUpperCase().padStart(4, '0');
@@ -152,18 +148,12 @@ function initApp() {
   const updateGovernanceUI = (unicode: string) => {
     const entry = appManifest?.entries?.[unicode];
     const level: GovernanceLevel = entry?.level ?? 'HK_LIKELY'; 
-    
     setVerifiedBadge(level === 'HK_VERIFIED');
-    
-    if (level === 'HK_DIVERGENT') {
-      showWarning(i18n.t('ui.alert.divergent'));
-    } else {
-      hideWarning();
-    }
+    if (level === 'HK_DIVERGENT') showWarning(i18n.t('ui.alert.divergent'));
+    else hideWarning();
   };
 
   const searchAndLoad = async (char: string) => {
-    // 競態保護 (Race Condition Protection)
     if (currentSearchController) currentSearchController.abort();
     currentSearchController = new AbortController();
     const { signal } = currentSearchController;
@@ -180,19 +170,14 @@ function initApp() {
       
       const data: StrokeData = await response.json();
       setCurrentCharData(data);
-      
       traceCanvas.loadCharacter(data);
       updateGovernanceUI(unicode);
-      
       traceCanvas.startAutoPlay(() => updatePlayBubbleState(false));
       updatePlayBubbleState(true);
       
     } catch (err) {
-      // 忽略因使用者快速輸入而被阻斷的舊請求
       if (err instanceof Error && err.name === 'AbortError') return;
-      
       showWarning(i18n.t('ui.alert.notFound', { char }), true);
-      
       setCurrentCharData(null);
       traceCanvas.clearData();
       setVerifiedBadge(false);
@@ -205,25 +190,24 @@ function initApp() {
     if (synth.speaking) synth.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
+    utterance.lang = lang; // 基礎防線
     utterance.rate = 0.85;
 
-    // 👇 解決 iOS Safari 無視 lang 設定，強制配對正確的語音包
+    // 👇 終極防線 2：擴充中文名稱比對，並抓出系統真實發音人
     const voices = synth.getVoices();
     let targetVoice = undefined;
 
     if (lang === 'zh-HK') {
-      // 嚴格篩選廣東話語音包
-      targetVoice = voices.find(v => /yue|cantonese|hong kong|zh-hk|粵語|廣東話/i.test(v.name + ' ' + v.lang));
+      targetVoice = voices.find(v => /yue|cantonese|hong kong|zh-hk|粵|廣東/i.test(v.name + ' ' + v.lang));
     } else if (lang === 'zh-CN') {
-      // 嚴格篩選普通話/國語語音包，並「強制排除」任何包含廣東話關鍵字的語音
       targetVoice = voices.find(v => 
-        /zh-cn|zh-tw|mandarin|cmn/i.test(v.lang + ' ' + v.name) && 
-        !/yue|cantonese|hong kong|zh-hk|粵語|廣東話/i.test(v.name + ' ' + v.lang)
+        // 擴大搜索：加入 Ting-Ting、Mei-Jia、普通話、國語 等 iOS 常見隱藏代號
+        /zh-cn|zh-tw|mandarin|cmn|普通|國語|ting-ting|meijia|yaling/i.test(v.lang + ' ' + v.name) && 
+        // 嚴格排他：絕對不可混入廣東話
+        !/yue|cantonese|hong kong|zh-hk|粵|廣東/i.test(v.name + ' ' + v.lang)
       );
     }
 
-    // 如果有成功抓到正確的真實語音包，強制綁定
     if (targetVoice) {
       utterance.voice = targetVoice;
     }
@@ -241,7 +225,6 @@ function initApp() {
   // 5. 綁定事件與語系訂閱
   elBtnSearch.addEventListener('click', handleSearch);
   elInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSearch(); });
-  
   btnPrev.addEventListener('click', () => traceCanvas.prevStroke());
   btnNext.addEventListener('click', () => traceCanvas.nextStroke());
   btnClear.addEventListener('click', () => traceCanvas.clearInk());
