@@ -1,5 +1,5 @@
 // src/main.ts
-import './easter-egg'; // 
+import './easter-egg'; // 載入家長陪伴與倉頡控制台彩蛋模組
 import { TraceCanvas, StrokeData } from './ui/canvas-trace';
 import { i18n, Locale } from './core/i18n';
 
@@ -19,45 +19,6 @@ interface AppManifest {
   stats: Record<GovernanceLevel, number>;
   entries: Record<string, ManifestEntry>;
 }
-
-// =================================================================
-// 📜 F12 控制台：倉頡時空彩蛋模組 (Cangjie Easter Egg CLI)
-// =================================================================
-(function initConsoleEasterEgg() {
-  const S_BAMBOO = 'background: #2b1d0c; color: #f5deb3; font-family: "PingFang HK", "MingLiU", monospace; font-size: 12px; line-height: 1.8; padding: 12px 16px; border-left: 6px solid #d4af37; border-radius: 4px; display: block;';
-  const S_TITLE = 'background: #d4af37; color: #1a0f00; font-family: "PingFang HK", sans-serif; font-size: 13px; font-weight: 900; padding: 4px 10px; border-radius: 2px;';
-  const S_TIP = 'background: #0f172a; color: #38bdf8; font-family: "PingFang HK", monospace; font-size: 11.5px; line-height: 1.6; padding: 10px 14px; border-left: 5px solid #0284c7; display: block;';
-
-  (window as unknown as { cangjie: unknown }).cangjie = Object.freeze({
-    letter: function () {
-      console.log('%c📜【造字官倉頡 給二十一世紀香港學童的親筆信】', S_TITLE);
-      console.log(
-        '%c小友你好：\n\n' +
-        '我係四千幾年前喺泥土睇鳥獸腳印造字嘅倉頡。\n' +
-        '第一次嚟到現代香港，見到小學手冊入面嗰啲「警、禮、護、讀」，我都睇到眼花繚亂！\n' +
-        '老實講，如果今日要我同你一齊默書，我都未必拿滿分。\n\n' +
-        '但你知唔知？繁體字係全世界最靚嘅密碼積木：\n' +
-        '每一橫係地平線，每一豎係頂天立地嘅大樹，\n' +
-        '只要拆開部首、順住筆順慢慢起樓，每一隻字都裝住一個故事。\n\n' +
-        '寫字出界？唔緊要，我都成日畫出泥地！\n' +
-        '慢慢寫，呼吸一下，你寫出嚟嘅每一筆，都係同幾千年嘅我喺時空擊掌。\n\n' +
-        '—— 正在努力練習寫自己個名嘅 倉頡 筆',
-        S_BAMBOO
-      );
-      return '倉頡阿叔同你擊咗個掌！請輸入 cangjie.tips() 查看三大練字秘笈。';
-    },
-    tips: function () {
-      console.log(
-        '%c🛠️【倉頡現代求生．練字三大秘笈】\n\n' +
-        '1. 【字係積木，唔好死記】👉 唔好硬記廿劃！認清部首（水、木、言、心），拆散再拼合。\n' +
-        '2. 【筆順係力學結構】👉 先橫後豎、從上至下、外圍起好先關門，隻字先至企得穩。\n' +
-        '3. 【中間坐穩，四周呼吸】👉 米字格好珍貴，字重心擺中間，留少少空間畀字呼吸。',
-        S_TIP
-      );
-      return '秘笈已傳授！在搜尋框輸入「倉頡」查看時空信件！';
-    }
-  });
-})();
 
 function initApp() {
   // 終極防線 1：強制喚醒 iOS Safari 語音庫，解決 getVoices() 偷懶回傳空陣列的 Bug
@@ -103,8 +64,11 @@ function initApp() {
     if (!elWarning) return;
     elWarning.style.display = 'block';
     elWarning.classList.add('visible');
-    if (isError) elWarning.classList.add('warning-error');
-    else elWarning.classList.remove('warning-error');
+    if (isError) {
+      elWarning.classList.add('warning-error');
+    } else {
+      elWarning.classList.remove('warning-error');
+    }
     elWarning.textContent = text;
   };
 
@@ -239,10 +203,9 @@ function initApp() {
     if (synth.speaking) synth.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang; // 基礎防線
+    utterance.lang = lang;
     utterance.rate = 0.85;
 
-    // 終極防線 2：擴充中文名稱比對，並抓出系統真實發音人
     const voices = synth.getVoices();
     let targetVoice = undefined;
 
@@ -327,7 +290,7 @@ function initApp() {
     const input = elInput.value.trim();
     if (!input) return;
 
-    // 🎯 觸發倉頡時空彩蛋
+    // 🎯 搜尋框輸入「倉頡」觸發時空彈窗
     if (input === '倉頡') {
       showCangjieModal();
       return;
