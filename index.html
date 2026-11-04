@@ -31,7 +31,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="童寫繁體字 KidsWriteTC | 港標筆順練字工具" />
     <meta name="twitter:description" content="零私隱風險的兒童練字工具！支援雙層畫布描紅、三態資料治理與粵普發音，陪伴孩子寫好每一個繁體字。" />
-    <meta name="twitter:image" content="https://jackylawck.github.io/KidsWriteTC/KidsWriteTC512icon.png" />
+    <meta property="twitter:image" content="https://jackylawck.github.io/KidsWriteTC/KidsWriteTC512icon.png" />
 
     <!-- 📱 PWA 與行動裝置設定 (支援加入手機主畫面) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -41,15 +41,13 @@
     <meta name="theme-color" content="#b71c1c" />
     <meta name="application-name" content="KidsWriteTC" />
     
-    <!-- 👇 修復：將 / 改為 ./ 確保 GitHub Pages 子目錄能正確讀取 public 內的靜態圖示 -->
+    <!-- 🖼️ 網站圖示與 PWA 清單 (已移除不存在的 favicon.ico，消除 404 報錯) -->
     <link rel="apple-touch-icon" sizes="192x192" href="./KidsWriteTC192icon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="./KidsWriteTC192icon.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="./KidsWriteTC512icon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="icon" href="./favicon.ico" />
 
     <!-- 🛡️ 企業級安全策略：Content Security Policy (CSP) 與權限隔離 -->
-    <!-- 嚴格限制來源，防禦 XSS，並拒絕任何硬體權限 (無相機、無麥克風、無定位) -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self' 'unsafe-inline';
