@@ -26,7 +26,7 @@
   color-scheme: light; /* 防止深色模式下控制項反白 */
 }
 
-/* 👇 修復 1：修正為星號 * 全域選取器 */
+/* 👇 修復 1：修正為星號 * 全域選取器 (原為 - 導致整段無效) */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -292,7 +292,7 @@ h1 {
   transform: scale(0.95);
 }
 
-/* 👇 修復 3：對齊 index.html 的 .playback-controls 按鈕樣式 */
+/* 控制按鈕列 */
 .playback-controls {
   display: flex;
   gap: 8px;
@@ -336,7 +336,6 @@ h1 {
   width: 100%;
 }
 
-/* 👇 修復 4：對齊 index.html 的 .meta-table 與 .pronounce-table 樣式 */
 .meta-table {
   border: 1px solid var(--secondary-light);
   border-radius: var(--radius-md);
@@ -500,7 +499,8 @@ button:focus-visible,
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
-  padding: 24px;
+  /* 👇 加大底部內距至 32px，確保捲動到底部時按鈕不貼邊 */
+  padding: 24px 24px 32px 24px;
   box-sizing: border-box;
   animation: cjSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -581,7 +581,10 @@ button:focus-visible,
 .cangjie-btn-close {
   display: block;
   width: 100%;
-  padding: 12px;
+  /* 👇 加大點擊與閱讀空間，防止文字切邊 */
+  padding: 14px 16px;
+  margin-top: 10px;
+  flex-shrink: 0;
   background: #8c2d19;
   color: #fff;
   border: none;
