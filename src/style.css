@@ -454,3 +454,136 @@ button:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* ================================================================= */
+/* 📜 倉頡時空信件互動彈窗 (Cangjie Easter Egg Modal)              */
+/* ================================================================= */
+.cangjie-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 15, 10, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 16px;
+  animation: cjFadeIn 0.25s ease-out;
+}
+
+.cangjie-modal {
+  background: #fdfaf2;
+  border: 3px solid #b78a38;
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35), inset 0 0 16px rgba(183, 138, 56, 0.15);
+  max-width: 480px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+  animation: cjSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cangjie-header {
+  text-align: center;
+  border-bottom: 2px dashed #d4af37;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.cangjie-badge {
+  display: inline-block;
+  background: #8c2d19;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-bottom: 6px;
+}
+
+.cangjie-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #3b2219;
+  margin: 4px 0 0 0;
+}
+
+.cangjie-letter {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: #4a3429;
+  background: #f7f1e3;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border-left: 4px solid #8c2d19;
+  margin-bottom: 16px;
+}
+
+.cangjie-tips-box {
+  margin-bottom: 20px;
+}
+
+.cangjie-tips-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #8c2d19;
+  margin-bottom: 10px;
+}
+
+.cangjie-tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #2c2523;
+}
+
+.cangjie-tip-num {
+  background: #b78a38;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.cangjie-btn-close {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background: #8c2d19;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.cangjie-btn-close:active {
+  background: #6e2010;
+}
+
+@keyframes cjFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cjSlideUp {
+  from { transform: translateY(18px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
