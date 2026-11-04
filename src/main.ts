@@ -1,4 +1,5 @@
 // src/main.ts
+import './easter-egg'; // 
 import { TraceCanvas, StrokeData } from './ui/canvas-trace';
 import { i18n, Locale } from './core/i18n';
 
