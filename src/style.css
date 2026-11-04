@@ -26,6 +26,7 @@
   color-scheme: light; /* 防止深色模式下控制項反白 */
 }
 
+/* 👇 修復 1：修正為星號 * 全域選取器 */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -38,6 +39,9 @@ body {
   color: var(--text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  
+  /* 👇 修復 2：防止 iOS Safari 上下拉動快閃與橡皮筋回彈 */
+  overscroll-behavior-y: none;
 }
 
 #app {
@@ -58,7 +62,7 @@ h1 {
   margin-bottom: 8px;
 }
 
-.subtitle {
+#ui-desc {
   color: var(--text-muted);
   font-size: 1rem;
 }
@@ -82,7 +86,8 @@ h1 {
   transition: all 0.2s ease;
 }
 
-.lang-selector button[aria-checked="true"] {
+.lang-selector button[aria-checked="true"],
+.lang-selector button.active {
   background: #e0f2f1;
   color: #00695c;
   border-color: #00897b;
@@ -127,8 +132,6 @@ h1 {
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
-  
-  /* 👇 修復：確保按鈕有足夠寬度且文字絕對不會被折行變直排 */
   white-space: nowrap;
   min-width: max-content;
 }
@@ -187,7 +190,7 @@ h1 {
   color: #c62828;
 }
 
-/* 畫布容器 (維持 1:1 比例) */
+/* 畫布容器 (維持 1:1 正方形) */
 .canvas-container {
   position: relative;
   width: 100%;
@@ -235,7 +238,7 @@ h1 {
   z-index: 3;
 }
 
-/* === 專家核定徽章 (HK_VERIFIED) === */
+/* 專家核定徽章 (HK_VERIFIED) */
 .verified-badge {
   position: absolute;
   top: 12px;
@@ -289,124 +292,139 @@ h1 {
   transform: scale(0.95);
 }
 
-/* 控制按鈕列 */
-.controls-row {
+/* 👇 修復 3：對齊 index.html 的 .playback-controls 按鈕樣式 */
+.playback-controls {
   display: flex;
   gap: 8px;
   margin-top: 16px;
   flex-wrap: wrap;
   justify-content: center;
+  width: 100%;
 }
 
-.btn-control {
-  padding: 8px 16px;
+.playback-controls button {
+  padding: 8px 14px;
   background: white;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
   color: var(--text-main);
   transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
 }
 
-.btn-control:hover {
+.playback-controls button:hover {
   background: #f5f5f5;
   border-color: #bdbdbd;
 }
 
-.btn-control.danger {
+.playback-controls button.btn-danger {
   color: var(--primary-color);
   border-color: #ffcdd2;
 }
-.btn-control.danger:hover {
+
+.playback-controls button.btn-danger:hover {
   background: #ffebee;
 }
 
 /* === 右側：屬性資料卡 === */
-.meta-panel {
+.meta-card {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
 }
 
-.meta-card {
+/* 👇 修復 4：對齊 index.html 的 .meta-table 與 .pronounce-table 樣式 */
+.meta-table {
   border: 1px solid var(--secondary-light);
   border-radius: var(--radius-md);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
-.meta-header {
-  background-color: var(--secondary-color);
-  color: white;
-  padding: 8px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.meta-grid-2col {
+.meta-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   text-align: center;
 }
 
-.meta-col {
-  padding: 12px 8px;
+.meta-row.header-row {
+  background-color: var(--secondary-color);
+  color: white;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 8px 0;
+}
+
+.meta-row.content-row {
   background-color: #e0f2f1;
 }
-.meta-col:first-child {
-  border-right: 1px solid rgba(0, 121, 107, 0.1);
+
+.meta-cell {
+  padding: 12px 8px;
 }
 
-.meta-label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--secondary-dark);
-  margin-bottom: 4px;
+.meta-row.content-row .meta-cell:first-child {
+  border-right: 1px solid rgba(0, 121, 107, 0.15);
+}
+
+#meta-radical,
+#meta-total-strokes {
+  font-size: 1.25rem;
   font-weight: bold;
-}
-
-.meta-val {
-  font-size: 1.2rem;
   color: var(--text-main);
 }
 
-/* 發音區塊 */
-.pronounce-card .meta-header {
-  background-color: #0288d1;
+/* 發音卡片與表格 */
+.pronounce-table {
+  border: 1px solid #81d4fa;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
-.pronounce-card {
-  border-color: #81d4fa;
+
+.pronounce-header {
+  background-color: #0288d1;
+  color: white;
+  padding: 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
 .pronounce-row {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 14px;
   background-color: #e1f5fe;
-  border-bottom: 1px solid rgba(2, 136, 209, 0.1);
+  border-bottom: 1px solid rgba(2, 136, 209, 0.12);
+  gap: 8px;
 }
+
 .pronounce-row:last-child {
   border-bottom: none;
 }
 
-.lang-label {
-  width: 60px;
-  font-size: 0.9rem;
+.pronounce-label {
+  width: 55px;
+  font-size: 0.85rem;
   font-weight: bold;
   color: #01579b;
+  flex-shrink: 0;
 }
 
 .pronounce-val {
   flex: 1;
   font-family: monospace;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   color: var(--text-main);
 }
 
 .pronounce-note {
   font-size: 0.8rem;
   color: var(--text-muted);
-  margin-left: 8px;
 }
 
 .btn-audio {
@@ -418,15 +436,16 @@ h1 {
   padding: 4px;
   border-radius: 50%;
   transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-audio:hover {
-  background: rgba(2, 136, 209, 0.1);
+  background: rgba(2, 136, 209, 0.15);
 }
 
 /* === 無障礙設定與排版修復 === */
-
-/* 👇 修復：隱藏給螢幕閱讀器的標籤，釋放橫向空間，避免 Flex 擠壓 */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -456,7 +475,7 @@ button:focus-visible,
 }
 
 /* ================================================================= */
-/* 📜 倉頡時空信件互動彈窗 (Cangjie Easter Egg Modal)              */
+/* 📜 倉頡時空信件互動彈窗 (Cangjie Easter Egg Modal)               */
 /* ================================================================= */
 .cangjie-overlay {
   position: fixed;
